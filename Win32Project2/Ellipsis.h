@@ -13,7 +13,7 @@ private:
 	int iPenColor_;
 public:
 	Ellipsis(RECT rRect, int BrushColor, int iPenColor);
-	~Ellipsis(){};
+	~Ellipsis(){}; 
 	virtual void print(HDC) const;
 	GObject* copy();
 };
