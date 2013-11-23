@@ -13,7 +13,7 @@ Ellipsis::Ellipsis(RECT rRect, int iBrushColor, int iPenColor){
 	iPenColor_ = iPenColor;
 }
 
-void Ellipsis::print(HDC hDC) const{
+void Ellipsis::draw(HDC hDC) const{
 	SetDCBrushColor(hDC, iBrushColor_);
 	SelectObject(hDC, GetStockObject(DC_PEN));
 	SetDCPenColor(hDC, iPenColor_);

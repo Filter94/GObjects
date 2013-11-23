@@ -13,6 +13,6 @@ private:
 public:
 	Square(RECT rRect, int iBrushColor, int iPenColor);
 	~Square(){};
-	virtual void print(HDC) const;
+	virtual void draw(HDC) const;
 	GObject* copy();
 };

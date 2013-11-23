@@ -7,7 +7,7 @@ using namespace std;
 
 class List2: public GObject{
 public:
-	void print(HDC) const;
+	void draw(HDC) const;
 	List2();//crt
 	~List2();//dsry
 	List2(const List2&);//cpy

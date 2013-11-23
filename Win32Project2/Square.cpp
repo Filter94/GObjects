@@ -13,7 +13,7 @@ Square::Square(RECT rRect, int iBrushColor, int iPenColor){
 	iPenColor_ = iPenColor;
 }
 
-void Square::print(HDC hDC) const{
+void Square::draw(HDC hDC) const{
 	SetDCBrushColor(hDC, iBrushColor_);
 	SelectObject(hDC, GetStockObject(DC_PEN));
 	SetDCPenColor(hDC, iPenColor_);

@@ -3,9 +3,9 @@
 
 #include "stdafx.h"
 
-#define MAX_HOROFFSET 100
-#define MAX_VEROFFSET 100
-#define MAX_CIRCLE_RADIUS 100
+#define MAX_HOROFFSET 250
+#define MAX_VEROFFSET 250
+#define MAX_CIRCLE_RADIUS 250
 #define MAX_RGB_RANGE 255
 #define MAX_LOADSTRING 100
 
@@ -127,7 +127,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 //
 
-List2 lObjectList;
+
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -135,7 +135,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	PAINTSTRUCT ps;
 	HDC hdc;
 	POINT pMouse;
-	BOOL bAnisotropicOn=TRUE;
+	static List2 lObjectList;
+	static BOOL bAnisotropicOn = TRUE;
 	int cxClient = 0;
 	int cyClient = 0;
 
@@ -162,17 +163,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		return 0;
 	case WM_PAINT:{
 		hdc = BeginPaint(hWnd, &ps);
+		RECT rRect;
 		switch (bAnisotropicOn){
 		case TRUE:{
+				GetClientRect(hWnd, &rRect);
 				SetMapMode(hdc, MM_ANISOTROPIC);
+				SetWindowExtEx(hdc, 1000, 1000, NULL);
+				SetViewportExtEx(hdc, rRect.right,  rRect.bottom, NULL);
 				break;
 		}
 		case FALSE:{
+				GetClientRect(hWnd, &rRect);
 				SetMapMode(hdc, MM_ISOTROPIC);
+				SetWindowExtEx(hdc, 1000, 1000, NULL);
+				SetViewportExtEx(hdc, rRect.right, rRect.bottom, NULL);
 				break;
 		}
 		}
-		lObjectList.print(hdc);
+		lObjectList.draw(hdc);
 		EndPaint(hWnd, &ps);
 		break;
 	}
@@ -181,29 +189,40 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		pMouse.y = HIWORD(lParam);
 		int iRandomH = rand() % MAX_HOROFFSET;
 		int iRandomV = rand() % MAX_VEROFFSET;
-		RECT rCurrentRect;
-		rCurrentRect.bottom = pMouse.y + iRandomV;
-		rCurrentRect.right = pMouse.x + iRandomH;
-		rCurrentRect.left = pMouse.x;
-		rCurrentRect.top = pMouse.y;
+		RECT rInvalideRect, rCurrentRect, rClientRect;
+		GetClientRect(hWnd, &rClientRect);
+		rInvalideRect.left = pMouse.x;
+		rInvalideRect.top = pMouse.y;
+		rInvalideRect.right = (pMouse.x + iRandomH);
+		rInvalideRect.bottom = (pMouse.y + iRandomV);
+		rCurrentRect.left = pMouse.x * 1000 / rClientRect.right;
+		rCurrentRect.top = pMouse.y * 1000 / rClientRect.bottom;
+		rCurrentRect.right = (pMouse.x + iRandomH) * 1000 / rClientRect.right;
+		rCurrentRect.bottom = (pMouse.y + iRandomV) * 1000 / rClientRect.bottom;
 		Square sSquare(rCurrentRect, RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE), RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE));
 		
-		InvalidateRect(hWnd, &rCurrentRect, 0);
+		InvalidateRect(hWnd, &rInvalideRect, 0);
+		InvalidateRect(hWnd, NULL, TRUE);
 		lObjectList.add(&sSquare);
 		break;
 	}
 	case WM_RBUTTONDOWN:{
 		pMouse.x = LOWORD(lParam);
 		pMouse.y = HIWORD(lParam);
-		int iRandomH = rand() % MAX_CIRCLE_RADIUS;
-		RECT rCurrentRect;
-		rCurrentRect.bottom = pMouse.y + iRandomH;
-		rCurrentRect.right = pMouse.x + iRandomH;
-		rCurrentRect.left = pMouse.x;
-		rCurrentRect.top = pMouse.y;
+		int iRandomR = rand() % MAX_CIRCLE_RADIUS;
+		RECT rInvalideRect,rCurrentRect, rClientRect;
+		GetClientRect(hWnd, &rClientRect);
+		rInvalideRect.left = pMouse.x;
+		rInvalideRect.top = pMouse.y;
+		rInvalideRect.right = (pMouse.x + iRandomR);
+		rInvalideRect.bottom = (pMouse.y + iRandomR);
+		rCurrentRect.left = pMouse.x * 1000 / rClientRect.right;
+		rCurrentRect.top = pMouse.y * 1000 / rClientRect.bottom;
+		rCurrentRect.right = (pMouse.x + iRandomR) * 1000 / rClientRect.right;
+		rCurrentRect.bottom = (pMouse.y + iRandomR) * 1000 / rClientRect.bottom;
 		Ellipsis sSquare(rCurrentRect, RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE), RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE));
 		
-		InvalidateRect(hWnd, &rCurrentRect, 0);
+		InvalidateRect(hWnd, &rInvalideRect, 0);
 		lObjectList.add(&sSquare);
 		break;
 	}

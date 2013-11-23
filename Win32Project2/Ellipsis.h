@@ -14,6 +14,6 @@ private:
 public:
 	Ellipsis(RECT rRect, int BrushColor, int iPenColor);
 	~Ellipsis(){};  
-	virtual void print(HDC) const;
+	virtual void draw(HDC) const;
 	GObject* copy();
 };

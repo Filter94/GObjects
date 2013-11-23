@@ -5,7 +5,7 @@ using namespace std;
 
 class GObject{
 public:
-	virtual void print(HDC) const = 0;
+	virtual void draw(HDC) const = 0;
 	virtual ~GObject(){};
 	virtual GObject* copy() = 0;
 };

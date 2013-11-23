@@ -19,19 +19,15 @@ List2::List2(const List2& list){
 	copy(list);
 }
 
-void List2::print(HDC hDC) const{
+void List2::draw(HDC hDC) const{
 	if (!isEmpty()){
 		SelectObject(hDC, GetStockObject(DC_BRUSH));
 		toBegin();
-		while (TRUE){
-			(*getCurrent()).print(hDC);
-			if (!isInEnd()){
+		while(!isAfterEnd()){
+			(*getCurrent()).draw(hDC);
 				toNext();
-			}
-			else{
-				break;
-			}
 		};
+		toEnd();
 	}
 }
 
