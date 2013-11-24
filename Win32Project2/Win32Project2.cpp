@@ -128,17 +128,19 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 //
 
+static POINT pMouse;
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId, wmEvent;
 	PAINTSTRUCT ps;
 	HDC hdc;
-	static POINT pMouse;
+	int cxClient = 0;
+	int cyClient = 0;
 	static List2 lObjectList;
 	static BOOL bAnisotropicOn = TRUE;
 	static RECT rInvalideRect;
-	int cxClient = 0;
-	int cyClient = 0;
+	
 	switch (message)
 	{
 		case WM_COMMAND:
@@ -179,6 +181,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					break;
 			}
 			}
+			RECT text;
+			text.left = 900;
+			text.top = 900;
+			text.right = 1000;
+			text.bottom = 1000;
+			Rectangle(hdc, 900, 900, 1000, 1000);
 			lObjectList.draw(hdc);
 			EndPaint(hWnd, &ps);
 			break;
@@ -190,18 +198,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				static RECT rInvalideRect, rClientRect;
 				TRIANGLE_ tCurrentTriangle_;
 				GetClientRect(hWnd, &rClientRect);
-				pMouse.x = LOWORD(lParam);
-				pMouse.y = HIWORD(lParam);
-				rInvalideRect.left = (pMouse.x * rClientRect.right / 1000 - iRandomH / 2);
-				rInvalideRect.top = (pMouse.y * rClientRect.bottom / 1000 - iRandomV / 2);
-				rInvalideRect.right = (pMouse.x * rClientRect.right / 1000 + iRandomH / 2);
-				rInvalideRect.bottom = (pMouse.y * rClientRect.bottom / 1000 + iRandomV / 2);
-				tCurrentTriangle_.first.x = pMouse.x * rClientRect.right / 1000;
-				tCurrentTriangle_.first.y = pMouse.y * rClientRect.bottom / 1000;
-				tCurrentTriangle_.second.x = (pMouse.x * rClientRect.right / 1000 + (rand() % iRandomH) - iRandomH / 2);
-				tCurrentTriangle_.second.y = (pMouse.y * rClientRect.bottom / 1000 + (rand() % iRandomV) - iRandomV / 2);
-				tCurrentTriangle_.third.x = (pMouse.x * rClientRect.right / 1000 + (rand() % iRandomH) - iRandomH / 2);
-				tCurrentTriangle_.third.y = (pMouse.y * rClientRect.bottom / 1000 + (rand() % iRandomV) - iRandomV / 2);
+				rInvalideRect.left = (pMouse.x - iRandomH * rClientRect.right / 1000 / 2) - 1;;
+				rInvalideRect.top = (pMouse.y - iRandomV * rClientRect.bottom / 1000 / 2) - 1;;
+				rInvalideRect.right = (pMouse.x + iRandomH * rClientRect.right / 1000 / 2);
+				rInvalideRect.bottom = (pMouse.y + iRandomV * rClientRect.bottom / 1000 / 2);
+				tCurrentTriangle_.first.x = pMouse.x * 1000 / rClientRect.right;
+				tCurrentTriangle_.first.y = pMouse.y * 1000 / rClientRect.bottom;
+				tCurrentTriangle_.second.x = (pMouse.x * 1000 / rClientRect.right + (rand() % iRandomH) - iRandomH / 2);
+				tCurrentTriangle_.second.y = (pMouse.y * 1000 / rClientRect.bottom + (rand() % iRandomV) - iRandomV / 2);
+				tCurrentTriangle_.third.x = (pMouse.x * 1000 / rClientRect.right + (rand() % iRandomH) - iRandomH / 2);
+				tCurrentTriangle_.third.y = (pMouse.y * 1000 / rClientRect.bottom / 1000 + (rand() % iRandomV) - iRandomV / 2);
 				Triangle tTriangle(tCurrentTriangle_, RGB(rand() % 255, rand() % 255, rand() % 255), RGB(rand() % 255, rand() % 255, rand() % 255));
 				InvalidateRect(hWnd, &rInvalideRect, NULL);
 				lObjectList.add(&tTriangle);
@@ -210,53 +216,55 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		case WM_LBUTTONDOWN:{
 			SetTimer(hWnd, IDT_ClickTimer, GetDoubleClickTime() + 1, (TIMERPROC)NULL);
-			pMouse.x = LOWORD(lParam);
-			pMouse.y = HIWORD(lParam);
+			RECT rClientRect;
+			GetClientRect(hWnd, &rClientRect);
+			pMouse.x = LOWORD(lParam) ;
+			pMouse.y = HIWORD(lParam) ;
 			break;
 		}
 		case WM_TIMER:{
 			int iRandomH = rand() % MAX_HOROFFSET;
-			int iRandomV = rand() % MAX_VEROFFSET;
+			int iRandomV = rand() % MAX_HOROFFSET;
 			RECT rInvalideRect, rCurrentRect, rClientRect;
 			GetClientRect(hWnd, &rClientRect);
-			rInvalideRect.left = pMouse.x * rClientRect.right / 1000;
-			rInvalideRect.top = pMouse.y * rClientRect.bottom / 1000;
-			rInvalideRect.right = (pMouse.x * rClientRect.right / 1000 + iRandomH);
-			rInvalideRect.bottom = (pMouse.y * rClientRect.bottom / 1000 + iRandomV);
-			rCurrentRect.left = pMouse.x * rClientRect.right / 1000;
-			rCurrentRect.top = pMouse.y * rClientRect.bottom / 1000;
-			rCurrentRect.right = (pMouse.x * rClientRect.right / 1000 + iRandomH);
-			rCurrentRect.bottom = (pMouse.y * rClientRect.bottom / 1000 + iRandomV);
-			_Rectangle sRectangle(rCurrentRect, RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE), RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE));
+			rInvalideRect.left = pMouse.x - 1;
+			rInvalideRect.top = pMouse.y - 1;;
+			rInvalideRect.right = (pMouse.x + iRandomH * rClientRect.right / 1000);
+			rInvalideRect.bottom = (pMouse.y + iRandomV * rClientRect.bottom / 1000);
+			rCurrentRect.left = pMouse.x * 1000 / rClientRect.right;
+			rCurrentRect.top = pMouse.y * 1000 / rClientRect.bottom;
+			rCurrentRect.right = (pMouse.x * 1000 / rClientRect.right + iRandomH);
+			rCurrentRect.bottom = (pMouse.y * 1000 / rClientRect.bottom + iRandomV);
+			_Rectangle rRectangle(rCurrentRect, RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE), RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE));
 
 			InvalidateRect(hWnd, &rInvalideRect, 0);
-			InvalidateRect(hWnd, NULL, TRUE);
-			lObjectList.add(&sRectangle);
+			lObjectList.add(&rRectangle);
 			KillTimer(hWnd, IDT_ClickTimer);
 			break;
 		}
 		case WM_RBUTTONDOWN:{
+			int iRandomR = rand() % MAX_CIRCLE_RADIUS;
 			pMouse.x = LOWORD(lParam);
 			pMouse.y = HIWORD(lParam);
-			int iRandomR = rand() % MAX_CIRCLE_RADIUS;
-			RECT rInvalideRect,rCurrentRect, rClientRect;
+			RECT rInvalideRect, rCurrentRect, rClientRect;
 			GetClientRect(hWnd, &rClientRect);
-			rInvalideRect.left = pMouse.x * 1000 / rClientRect.right;
-			rInvalideRect.top = pMouse.y * rClientRect.bottom / 1000;
-			rInvalideRect.right = (pMouse.x * 1000 / rClientRect.right + iRandomR);
-			rInvalideRect.bottom = (pMouse.y * rClientRect.bottom / 1000 + iRandomR);
+			rInvalideRect.left = pMouse.x - 1;
+			rInvalideRect.top = pMouse.y - 1;;
+			rInvalideRect.right = (pMouse.x + iRandomR * rClientRect.right / 1000);
+			rInvalideRect.bottom = (pMouse.y + iRandomR * rClientRect.bottom / 1000);
 			rCurrentRect.left = pMouse.x * 1000 / rClientRect.right;
-			rCurrentRect.top = pMouse.y * rClientRect.bottom / 1000;
+			rCurrentRect.top = pMouse.y * 1000 / rClientRect.bottom;
 			rCurrentRect.right = (pMouse.x * 1000 / rClientRect.right + iRandomR);
-			rCurrentRect.bottom = (pMouse.y * rClientRect.bottom / 1000 + iRandomR);
-			Ellipsis eCircle(rCurrentRect, RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE), RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE));
-		
+			rCurrentRect.bottom = (pMouse.y * 1000 / rClientRect.bottom + iRandomR);
+			Ellipsis eEllipse(rCurrentRect, RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE), RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE));
+
 			InvalidateRect(hWnd, &rInvalideRect, 0);
-			lObjectList.add(&eCircle);
+			lObjectList.add(&eEllipse);
 			break;
 		}
 		case WM_MBUTTONDOWN:{
 				bAnisotropicOn = !bAnisotropicOn;
+				InvalidateRect(hWnd, NULL, TRUE);
 			break;
 		}
 		case WM_DESTROY:

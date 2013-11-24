@@ -15,6 +15,7 @@
 #include <memory.h>
 #include <tchar.h>
 #include <time.h>
+#include <string>
 
 
 // TODO: Установите здесь ссылки на дополнительные заголовки, требующиеся для программы
