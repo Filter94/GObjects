@@ -5,7 +5,9 @@
 *.suo
 *.user
 *.sln.docstates
-
+.gitignore
+*.sln
+.*
 # Build results
 
 [Dd]ebug/
