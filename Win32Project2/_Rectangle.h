@@ -5,14 +5,14 @@
 
 using namespace std;
 
-class Square : public GObject{
+class _Rectangle : public GObject{
 private:
 	RECT rRect_;
 	COLORREF iBrushColor_;
 	COLORREF iPenColor_;
 public:
-	Square(RECT rRect, int iBrushColor, int iPenColor);
-	~Square(){};
+	_Rectangle(RECT rRect, int iBrushColor, int iPenColor);
+	~_Rectangle(){};
 	virtual void draw(HDC) const;
 	GObject* copy();
 };

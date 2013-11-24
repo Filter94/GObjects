@@ -1,19 +1,19 @@
 #pragma once
-#include "Square.h"
+#include "_Rectangle.h"
 #include "stdafx.h"
 
-GObject* Square::copy(){
-	GObject * a = new Square(*this);
+GObject* _Rectangle::copy(){
+	GObject * a = new _Rectangle(*this);
 	return a;
 }
 
-Square::Square(RECT rRect, int iBrushColor, int iPenColor){
+_Rectangle::_Rectangle(RECT rRect, int iBrushColor, int iPenColor){
 	rRect_ = rRect;
 	iBrushColor_ = iBrushColor;
 	iPenColor_ = iPenColor;
 }
 
-void Square::draw(HDC hDC) const{
+void _Rectangle::draw(HDC hDC) const{
 	SetDCBrushColor(hDC, iBrushColor_);
 	SelectObject(hDC, GetStockObject(DC_PEN));
 	SetDCPenColor(hDC, iPenColor_);

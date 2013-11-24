@@ -14,6 +14,7 @@
 #include <malloc.h>
 #include <memory.h>
 #include <tchar.h>
+#include <time.h>
 
 
 // TODO: Установите здесь ссылки на дополнительные заголовки, требующиеся для программы
@@ -23,5 +24,6 @@
 #include "vld.h"
 #include "List2.h"
 #include "GObject.h"
-#include "Square.h"
+#include "_Rectangle.h"
 #include "Ellipsis.h"
+#include "Triangle.h"
