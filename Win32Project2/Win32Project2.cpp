@@ -8,7 +8,6 @@
 #define MAX_CIRCLE_RADIUS 250
 #define MAX_RGB_RANGE 255
 #define MAX_LOADSTRING 100
-#define IDT_ClickTimer 1
 
 // √лобальные переменные:
 HINSTANCE hInst;								// текущий экземпл€р
@@ -128,10 +127,30 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 //
 
-static POINT pMouse;
+
+void mapping_init(HDC hdc,HWND hWnd, bool bAnisotropicOn) {
+	RECT rRect;
+	switch (bAnisotropicOn){
+		case TRUE:{
+					  GetClientRect(hWnd, &rRect);
+					  SetMapMode(hdc, MM_ANISOTROPIC);
+					  SetWindowExtEx(hdc, 1000, 1000, NULL);
+					  SetViewportExtEx(hdc, rRect.right, rRect.bottom, NULL);
+					  break;
+		}
+		case FALSE:{
+					   GetClientRect(hWnd, &rRect);
+					   SetMapMode(hdc, MM_ISOTROPIC);
+					   SetWindowExtEx(hdc, 1000, 1000, NULL);
+					   SetViewportExtEx(hdc, rRect.right, rRect.bottom, NULL);
+					   break;
+	}
+	}
+}
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	static POINT pMouse;
 	int wmId, wmEvent;
 	PAINTSTRUCT ps;
 	HDC hdc;
@@ -140,7 +159,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static List2 lObjectList;
 	static BOOL bAnisotropicOn = TRUE;
 	static RECT rInvalideRect;
-	
+
+	static int iTimersAreActive = 0;
+
 	switch (message)
 	{
 		case WM_COMMAND:
@@ -164,28 +185,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		case WM_PAINT:{
 			hdc = BeginPaint(hWnd, &ps);
-			RECT rRect;
-			switch (bAnisotropicOn){
-			case TRUE:{
-					GetClientRect(hWnd, &rRect);
-					SetMapMode(hdc, MM_ANISOTROPIC);
-					SetWindowExtEx(hdc, 1000, 1000, NULL);
-					SetViewportExtEx(hdc, rRect.right,  rRect.bottom, NULL);
-					break;
-			}
-			case FALSE:{
-					GetClientRect(hWnd, &rRect);
-					SetMapMode(hdc, MM_ISOTROPIC);
-					SetWindowExtEx(hdc, 1000, 1000, NULL);
-					SetViewportExtEx(hdc, rRect.right, rRect.bottom, NULL);
-					break;
-			}
-			}
-			RECT text;
-			text.left = 900;
-			text.top = 900;
-			text.right = 1000;
-			text.bottom = 1000;
+			mapping_init(hdc, hWnd, bAnisotropicOn);
 			Rectangle(hdc, 900, 900, 1000, 1000);
 			lObjectList.draw(hdc);
 			EndPaint(hWnd, &ps);
@@ -195,51 +195,69 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				srand(rand());
 				int iRandomH = rand() % MAX_HOROFFSET + 1;
 				int iRandomV = rand() % MAX_VEROFFSET + 1;
-				static RECT rInvalideRect, rClientRect;
 				TRIANGLE_ tCurrentTriangle_;
-				GetClientRect(hWnd, &rClientRect);
-				rInvalideRect.left = (pMouse.x - iRandomH * rClientRect.right / 1000 / 2) - 1;;
-				rInvalideRect.top = (pMouse.y - iRandomV * rClientRect.bottom / 1000 / 2) - 1;;
-				rInvalideRect.right = (pMouse.x + iRandomH * rClientRect.right / 1000 / 2);
-				rInvalideRect.bottom = (pMouse.y + iRandomV * rClientRect.bottom / 1000 / 2);
-				tCurrentTriangle_.first.x = pMouse.x * 1000 / rClientRect.right;
-				tCurrentTriangle_.first.y = pMouse.y * 1000 / rClientRect.bottom;
-				tCurrentTriangle_.second.x = (pMouse.x * 1000 / rClientRect.right + (rand() % iRandomH) - iRandomH / 2);
-				tCurrentTriangle_.second.y = (pMouse.y * 1000 / rClientRect.bottom + (rand() % iRandomV) - iRandomV / 2);
-				tCurrentTriangle_.third.x = (pMouse.x * 1000 / rClientRect.right + (rand() % iRandomH) - iRandomH / 2);
-				tCurrentTriangle_.third.y = (pMouse.y * 1000 / rClientRect.bottom / 1000 + (rand() % iRandomV) - iRandomV / 2);
+
+				hdc = GetDC(hWnd);
+				mapping_init(hdc, hWnd, bAnisotropicOn);
+				DPtoLP(hdc, &pMouse, 1);
+				
+				
+				
+				rInvalideRect.left = pMouse.x - iRandomH;
+				rInvalideRect.top = pMouse.y - iRandomV;
+				rInvalideRect.right = (pMouse.x + iRandomH);
+				rInvalideRect.bottom = (pMouse.y + iRandomV);
+				LPtoDP(hdc, (LPPOINT)&rInvalideRect, 4);
+				ReleaseDC(hWnd, hdc);
+
+				tCurrentTriangle_.first.x = pMouse.x;
+				tCurrentTriangle_.first.y = pMouse.y;
+				tCurrentTriangle_.second.x = (pMouse.x + (rand() % iRandomH) - iRandomH / 2);
+				tCurrentTriangle_.second.y = (pMouse.y + (rand() % iRandomV) - iRandomV / 2);
+				tCurrentTriangle_.third.x = (pMouse.x + (rand() % iRandomH) - iRandomH / 2);
+				tCurrentTriangle_.third.y = (pMouse.y + (rand() % iRandomV) - iRandomV / 2);
+
 				Triangle tTriangle(tCurrentTriangle_, RGB(rand() % 255, rand() % 255, rand() % 255), RGB(rand() % 255, rand() % 255, rand() % 255));
 				InvalidateRect(hWnd, &rInvalideRect, NULL);
+				ReleaseDC(hWnd, hdc);
 				lObjectList.add(&tTriangle);
-				KillTimer(hWnd, IDT_ClickTimer);
+				KillTimer(hWnd, iTimersAreActive--);
+				KillTimer(hWnd, iTimersAreActive--);
 				break;
 		}
 		case WM_LBUTTONDOWN:{
-			SetTimer(hWnd, IDT_ClickTimer, GetDoubleClickTime() + 1, (TIMERPROC)NULL);
-			RECT rClientRect;
-			GetClientRect(hWnd, &rClientRect);
-			pMouse.x = LOWORD(lParam) ;
-			pMouse.y = HIWORD(lParam) ;
+			SetTimer(hWnd, iTimersAreActive++, GetDoubleClickTime() + 1, (TIMERPROC)NULL);
+			pMouse.x = LOWORD(lParam);
+			pMouse.y = HIWORD(lParam);
 			break;
 		}
 		case WM_TIMER:{
 			int iRandomH = rand() % MAX_HOROFFSET;
 			int iRandomV = rand() % MAX_HOROFFSET;
-			RECT rInvalideRect, rCurrentRect, rClientRect;
-			GetClientRect(hWnd, &rClientRect);
-			rInvalideRect.left = pMouse.x - 1;
-			rInvalideRect.top = pMouse.y - 1;;
-			rInvalideRect.right = (pMouse.x + iRandomH * rClientRect.right / 1000);
-			rInvalideRect.bottom = (pMouse.y + iRandomV * rClientRect.bottom / 1000);
-			rCurrentRect.left = pMouse.x * 1000 / rClientRect.right;
-			rCurrentRect.top = pMouse.y * 1000 / rClientRect.bottom;
-			rCurrentRect.right = (pMouse.x * 1000 / rClientRect.right + iRandomH);
-			rCurrentRect.bottom = (pMouse.y * 1000 / rClientRect.bottom + iRandomV);
+			RECT rInvalideRect, rCurrentRect;
+
+			hdc = GetDC(hWnd);
+			mapping_init(hdc, hWnd, bAnisotropicOn);
+			DPtoLP(hdc, &pMouse, 1);
+
+			rInvalideRect.left = pMouse.x;
+			rInvalideRect.top = pMouse.y;
+			rInvalideRect.right = pMouse.x + iRandomH;
+			rInvalideRect.bottom = pMouse.y + iRandomV;
+
+			LPtoDP(hdc, (LPPOINT)&rInvalideRect, 4);
+			ReleaseDC(hWnd, hdc);
+
+
+			rCurrentRect.left = pMouse.x;
+			rCurrentRect.top = pMouse.y;
+			rCurrentRect.right = pMouse.x + iRandomH;
+			rCurrentRect.bottom = pMouse.y + iRandomV;
 			_Rectangle rRectangle(rCurrentRect, RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE), RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE));
 
 			InvalidateRect(hWnd, &rInvalideRect, 0);
 			lObjectList.add(&rRectangle);
-			KillTimer(hWnd, IDT_ClickTimer);
+			KillTimer(hWnd, wParam);
 			break;
 		}
 		case WM_RBUTTONDOWN:{
@@ -247,19 +265,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			pMouse.x = LOWORD(lParam);
 			pMouse.y = HIWORD(lParam);
 			RECT rInvalideRect, rCurrentRect, rClientRect;
-			GetClientRect(hWnd, &rClientRect);
-			rInvalideRect.left = pMouse.x - 1;
-			rInvalideRect.top = pMouse.y - 1;;
-			rInvalideRect.right = (pMouse.x + iRandomR * rClientRect.right / 1000);
-			rInvalideRect.bottom = (pMouse.y + iRandomR * rClientRect.bottom / 1000);
-			rCurrentRect.left = pMouse.x * 1000 / rClientRect.right;
-			rCurrentRect.top = pMouse.y * 1000 / rClientRect.bottom;
-			rCurrentRect.right = (pMouse.x * 1000 / rClientRect.right + iRandomR);
-			rCurrentRect.bottom = (pMouse.y * 1000 / rClientRect.bottom + iRandomR);
+			hdc = GetDC(hWnd);
+			mapping_init(hdc, hWnd, bAnisotropicOn);
+			DPtoLP(hdc, &pMouse, 1);
+
+
+
+			rInvalideRect.left = pMouse.x;
+			rInvalideRect.top = pMouse.y;
+			rInvalideRect.right = pMouse.x + iRandomR;
+			rInvalideRect.bottom = pMouse.y + iRandomR;
+
+			LPtoDP(hdc, (LPPOINT)&rInvalideRect, 4);
+			ReleaseDC(hWnd, hdc);
+
+
+			rCurrentRect.left = pMouse.x;
+			rCurrentRect.top = pMouse.y;
+			rCurrentRect.right = pMouse.x + iRandomR;
+			rCurrentRect.bottom = pMouse.y + iRandomR;
 			Ellipsis eEllipse(rCurrentRect, RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE), RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE));
 
 			InvalidateRect(hWnd, &rInvalideRect, 0);
 			lObjectList.add(&eEllipse);
+			break;
+		}
+		case WM_MOUSEMOVE:{
+			pMouse.x = LOWORD(lParam);
+			pMouse.y = HIWORD(lParam);
 			break;
 		}
 		case WM_MBUTTONDOWN:{
