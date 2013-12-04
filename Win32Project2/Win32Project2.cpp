@@ -149,7 +149,6 @@ void mapping_init(HDC hdc,HWND hWnd, bool bAnisotropicOn) {
 }
 
 Triangle draw_triangle(HWND hWnd, POINT pMouse, bool bAnisotropicOn){
-	srand(rand());
 	int iRandomH = rand() % MAX_HOROFFSET + 1;
 	int iRandomV = rand() % MAX_VEROFFSET + 1;
 	TRIANGLE_ tCurrentTriangle_;
@@ -159,19 +158,19 @@ Triangle draw_triangle(HWND hWnd, POINT pMouse, bool bAnisotropicOn){
 	mapping_init(hdc, hWnd, bAnisotropicOn);
 	DPtoLP(hdc, &pMouse, 1);
 
-	rInvalideRect.left = pMouse.x - iRandomH;
-	rInvalideRect.top = pMouse.y - iRandomV;
-	rInvalideRect.right = (pMouse.x + iRandomH);
-	rInvalideRect.bottom = (pMouse.y + iRandomV);
+	rInvalideRect.left = pMouse.x - 2 * iRandomH;
+	rInvalideRect.top = pMouse.y - 2 * iRandomV;
+	rInvalideRect.right = (pMouse.x + 2 * iRandomH);
+	rInvalideRect.bottom = (pMouse.y + 2 * iRandomV);
 	LPtoDP(hdc, (LPPOINT)&rInvalideRect, 4);
 	ReleaseDC(hWnd, hdc);
 
 	tCurrentTriangle_.first.x = pMouse.x;
 	tCurrentTriangle_.first.y = pMouse.y;
-	tCurrentTriangle_.second.x = (pMouse.x + (rand() % iRandomH) - iRandomH / 2);
-	tCurrentTriangle_.second.y = (pMouse.y + (rand() % iRandomV) - iRandomV / 2);
-	tCurrentTriangle_.third.x = (pMouse.x + (rand() % iRandomH) - iRandomH / 2);
-	tCurrentTriangle_.third.y = (pMouse.y + (rand() % iRandomV) - iRandomV / 2);
+	tCurrentTriangle_.second.x = (pMouse.x + (rand() % (2 * iRandomH)) - iRandomH / 2);
+	tCurrentTriangle_.second.y = (pMouse.y + (rand() % (2 * iRandomV)) - iRandomV / 2);
+	tCurrentTriangle_.third.x = (pMouse.x + (rand() % (2 * iRandomH)) - iRandomH / 2);
+	tCurrentTriangle_.third.y = (pMouse.y + (rand() % (2 * iRandomV)) - iRandomV / 2);
 
 	Triangle tTriangle(tCurrentTriangle_, RGB(rand() % 255, rand() % 255, rand() % 255), RGB(rand() % 255, rand() % 255, rand() % 255));
 	InvalidateRect(hWnd, &rInvalideRect, NULL);
@@ -235,6 +234,7 @@ _Rectangle draw_rectangle(HWND hWnd, POINT pMouse, bool bAnisotropicOn){
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	srand(rand());
 	static POINT pMouse;
 	int wmId, wmEvent;
 	PAINTSTRUCT ps;
