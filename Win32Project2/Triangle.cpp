@@ -14,6 +14,7 @@ Triangle::Triangle(TRIANGLE_ tTriangle, int iBrushColor, int iPenColor){
 }
 
 void Triangle::draw(HDC hDC) const{
+	SelectObject(hDC, GetStockObject(DC_BRUSH));
 	SetDCBrushColor(hDC, iBrushColor_);
 	SelectObject(hDC, GetStockObject(DC_PEN));
 	SetDCPenColor(hDC, iPenColor_);
