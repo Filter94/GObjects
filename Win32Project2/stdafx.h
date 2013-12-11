@@ -16,6 +16,7 @@
 #include <tchar.h>
 #include <time.h>
 #include <string>
+#include <queue>
 
 
 // TODO: Установите здесь ссылки на дополнительные заголовки, требующиеся для программы
