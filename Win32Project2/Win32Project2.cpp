@@ -12,6 +12,7 @@
 #define F_RECTANGLE 1
 #define F_CIRCLE 2
 #define ID_TIMER 1
+#define INVALIDE_RANGE 30
 
 using std::queue;
 
@@ -133,8 +134,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 //
 
-void mapping_init(HDC hdc, SIZE& size, const int iAnisotropicOn) {
-	switch (iAnisotropicOn){
+void MappingInit(HDC hdc, SIZE& size, const int iMapMode) {
+	switch (iMapMode){
 		case MM_ANISOTROPIC:{
 			SetMapMode(hdc, MM_ANISOTROPIC);
 			break;
@@ -148,11 +149,11 @@ void mapping_init(HDC hdc, SIZE& size, const int iAnisotropicOn) {
 	SetViewportExtEx(hdc, size.cx, size.cy, NULL);
 }
 
-bool are_collinear(const POINT& a, const POINT& b){
+bool AreCollinear(const POINT& a, const POINT& b){
 	return ((a.x / b.x) == (a.y / b.y));
 }
 
-Triangle create_triangle(const POINT& pMouse){
+Triangle CreateTriangle(const POINT& pMouse){
 	int iRandomH = rand() % MAX_HOROFFSET + 1;
 	int iRandomV = rand() % MAX_VEROFFSET + 1;
 	TRIANGLE_ tCurrentTriangle_;
@@ -164,14 +165,14 @@ Triangle create_triangle(const POINT& pMouse){
 		tCurrentTriangle_.second.y = (pMouse.y + (rand() % (2 * iRandomV)) - iRandomV / 2);
 		tCurrentTriangle_.third.x = (pMouse.x + (rand() % (2 * iRandomH)) - iRandomH / 2);
 		tCurrentTriangle_.third.y = (pMouse.y + (rand() % (2 * iRandomV)) - iRandomV / 2);
-	} while(are_collinear(tCurrentTriangle_.first, tCurrentTriangle_.second) 
-		&& are_collinear(tCurrentTriangle_.third, tCurrentTriangle_.second));
+	} while(AreCollinear(tCurrentTriangle_.first, tCurrentTriangle_.second) 
+		&& AreCollinear(tCurrentTriangle_.third, tCurrentTriangle_.second));
 
 	Triangle tTriangle(tCurrentTriangle_, RGB(rand() % 255, rand() % 255, rand() % 255), RGB(rand() % 255, rand() % 255, rand() % 255));
 	return tTriangle;
 }
 
-Ellipsis create_circle(const POINT& pMouse){
+Ellipsis CreateCircle(const POINT& pMouse){
 	int iRandomR = rand() % MAX_CIRCLE_RADIUS;
 	RECT rCurrentRect;
 
@@ -179,12 +180,12 @@ Ellipsis create_circle(const POINT& pMouse){
 	rCurrentRect.top = pMouse.y;
 	rCurrentRect.right = pMouse.x + iRandomR;
 	rCurrentRect.bottom = pMouse.y + iRandomR;
-	Ellipsis eEllipse(rCurrentRect, RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE), RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE));
+	Ellipsis eEllipse(rCurrentRect, RGB(rand() % 255, rand() % 255, rand() % 255), RGB(rand() % 255, rand() % 255, rand() % 255));
 
 	return eEllipse;
 }
 
-_Rectangle create_rectangle(const POINT& pMouse){
+_Rectangle CreateRectangle(const POINT& pMouse){
 	int iRandomH = rand() % MAX_HOROFFSET;
 	int iRandomV = rand() % MAX_HOROFFSET;
 	RECT rCurrentRect;
@@ -192,32 +193,32 @@ _Rectangle create_rectangle(const POINT& pMouse){
 	rCurrentRect.top = pMouse.y;
 	rCurrentRect.right = pMouse.x + iRandomH;
 	rCurrentRect.bottom = pMouse.y + iRandomV;
-	_Rectangle rRectangle(rCurrentRect, RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE), RGB(rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE, rand() % MAX_RGB_RANGE));
+	_Rectangle rRectangle(rCurrentRect, RGB(rand() % 255, rand() % 255, rand() % 255), RGB(rand() % 255, rand() % 255, rand() % 255));
 
 	return rRectangle;
 }
 
-void create_then_draw_then_add(HDC hdc, SIZE& size, const int iAnisotropicOn, const int Figure, POINT& pMouse, List2* list){
-	mapping_init(hdc, size, iAnisotropicOn);
+void CreateThenDrawThenAdd(HDC hdc, SIZE& size, const int iMapMode, const int Figure, POINT& pMouse, List2* list){
+	MappingInit(hdc, size, iMapMode);
 	DPtoLP(hdc, &pMouse, 1);
 	list -> toEnd();
 	switch (Figure) {
 		case F_CIRCLE:{
-			Ellipsis eEllipse = create_circle(pMouse);
+			Ellipsis eEllipse = CreateCircle(pMouse);
 			
 			eEllipse.draw(hdc);
 			list -> add(&eEllipse);
 			break;
 		}
 		case F_TRIANGLE:{
-			Triangle tTriangle = create_triangle(pMouse);
+			Triangle tTriangle = CreateTriangle(pMouse);
 
 			tTriangle.draw(hdc);
 			list -> add(&tTriangle);
 			break;
 		}
 		case F_RECTANGLE:{
-			_Rectangle rRectangle = create_rectangle(pMouse);
+			_Rectangle rRectangle = CreateRectangle(pMouse);
 
 			rRectangle.draw(hdc);
 			list -> add(&rRectangle);
@@ -226,17 +227,25 @@ void create_then_draw_then_add(HDC hdc, SIZE& size, const int iAnisotropicOn, co
 	}
 }
 
+void DrawBoxOutline(HDC hdc, POINT& ptBeg, POINT& ptEnd)
+{
+	SetROP2(hdc, R2_COPYPEN);
+	Rectangle(hdc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	static BOOL fBlocking;
+	static POINT ptBeg, ptEnd, ptBoxBeg, ptBoxEnd;
 	srand(rand());
 	static POINT pMouse, pPrevPoint;
 	int wmId, wmEvent;
 	PAINTSTRUCT ps;
 	HDC hdc;
 	static List2 lObjectList;
-	static int iAnisotropicOn = MM_ANISOTROPIC;
-	static bool timer_up = 0;
+	static INT iMapMode = MM_ANISOTROPIC;
 	static SIZE sClient;
+	static INT rgbRectPenColor, rgbRectBrushColor = RGB(255, 255, 255);
 
 	switch (message)
 	{
@@ -261,7 +270,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		case WM_PAINT:{
 			hdc = BeginPaint(hWnd, &ps);
-			mapping_init(hdc, sClient, iAnisotropicOn);
+			MappingInit(hdc, sClient, iMapMode);
 			lObjectList.draw(hdc);
 			SelectObject(hdc, GetStockObject(DC_BRUSH));
 			SetDCBrushColor(hdc, RGB(255,255,255));
@@ -273,71 +282,159 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		case WM_LBUTTONDBLCLK:{
 			hdc = GetDC(hWnd);
-			create_then_draw_then_add(hdc, sClient, iAnisotropicOn, F_TRIANGLE, pMouse, &lObjectList);
+			CreateThenDrawThenAdd(hdc, sClient, iMapMode, F_TRIANGLE, pMouse, &lObjectList);
 			ReleaseDC(hWnd, hdc);
 			KillTimer(hWnd, ID_TIMER);
 			break;
 		}
 		case WM_KEYDOWN:{
 			hdc = GetDC(hWnd);
-			switch (wParam)
-							{
+			switch (wParam){
 				case 'O':{
-					create_then_draw_then_add(hdc, sClient, iAnisotropicOn, F_CIRCLE, pMouse, &lObjectList);
+					CreateThenDrawThenAdd(hdc, sClient, iMapMode, F_CIRCLE, pMouse, &lObjectList);
 					break;
 				}
 				case 'T':{
-					create_then_draw_then_add(hdc, sClient, iAnisotropicOn, F_TRIANGLE, pMouse, &lObjectList);
+					CreateThenDrawThenAdd(hdc, sClient, iMapMode, F_TRIANGLE, pMouse, &lObjectList);
 					break;
 				}
 				case 'R':{
-					create_then_draw_then_add(hdc, sClient, iAnisotropicOn, F_RECTANGLE, pMouse, &lObjectList);
+					CreateThenDrawThenAdd(hdc, sClient, iMapMode, F_RECTANGLE, pMouse, &lObjectList);
 					break;
 				}
 			}
 			break;
 		}
 		case WM_LBUTTONDOWN:{
-			if (timer_up){
-				hdc = GetDC(hWnd);
-				KillTimer(hWnd, ID_TIMER);
-				timer_up = FALSE;
-				create_then_draw_then_add(hdc, sClient, iAnisotropicOn, F_RECTANGLE, pPrevPoint, &lObjectList);
-				ReleaseDC(hWnd, hdc);
-			}
-			pPrevPoint.x = LOWORD(lParam);
-			pPrevPoint.y = HIWORD(lParam);
-			SetTimer(hWnd, ID_TIMER, GetDoubleClickTime() + 1, (TIMERPROC)NULL);
-			timer_up = TRUE;
-			break;
-		}
-		case WM_TIMER:{
+			ptBeg.x = ptEnd.x = LOWORD(lParam);
+			ptBeg.y = ptEnd.y = HIWORD(lParam);
+			rgbRectPenColor = RGB(rand() % 255, rand() % 255, rand() % 255);
+			rgbRectBrushColor = RGB(rand() % 255, rand() % 255, rand() % 255);
 			hdc = GetDC(hWnd);
-			timer_up = FALSE;
-			create_then_draw_then_add(hdc, sClient, iAnisotropicOn, F_RECTANGLE, pPrevPoint, &lObjectList);
+			MappingInit(hdc, sClient, iMapMode);
+			DPtoLP(hdc, &ptBeg, 1);
+			DPtoLP(hdc, &ptEnd, 1);
+
+			SelectObject(hdc, GetStockObject(DC_BRUSH));
+			SelectObject(hdc, GetStockObject(DC_PEN));
+			SetDCPenColor(hdc, rgbRectPenColor);
+			SetDCBrushColor(hdc, rgbRectBrushColor);
+			DrawBoxOutline(hdc, ptBeg, ptEnd);
 			ReleaseDC(hWnd, hdc);
-			KillTimer(hWnd, wParam);
-			break;
+			SetCursor(LoadCursor(NULL, IDC_CROSS));
+
+			fBlocking = TRUE;
+			return 0;
 		}
 		case WM_RBUTTONDOWN:{
 			hdc = GetDC(hWnd);
-			create_then_draw_then_add(hdc, sClient, iAnisotropicOn, F_CIRCLE, pMouse, &lObjectList);
+			CreateThenDrawThenAdd(hdc, sClient, iMapMode, F_CIRCLE, pMouse, &lObjectList);
 			ReleaseDC(hWnd, hdc);
 			break;
 		}
 		case WM_MOUSEMOVE:{
+			if (fBlocking)
+			{
+				SetCursor(LoadCursor(NULL, IDC_CROSS));
+
+				hdc = GetDC(hWnd);
+				MappingInit(hdc, sClient, iMapMode);
+
+				ptEnd = pMouse;
+
+				DPtoLP(hdc, &ptEnd, 1);
+
+				SelectObject(hdc, GetStockObject(DC_BRUSH));
+				SelectObject(hdc, GetStockObject(DC_PEN));
+				SetDCPenColor(hdc, rgbRectPenColor);
+				SetDCBrushColor(hdc, rgbRectBrushColor);
+				DrawBoxOutline(hdc, ptBeg, ptEnd);
+
+				RECT rBot, rTop, rLeft, rRight;
+				rBot.left = ptBeg.x;
+				rBot.top = ptEnd.y;
+				rBot.right = ptEnd.x;
+				rBot.bottom = ptEnd.y + INVALIDE_RANGE;
+
+				LPtoDP(hdc, (LPPOINT)&rBot, 2);
+
+				rTop.left = ptBeg.x;
+				rTop.top = ptBeg.y - INVALIDE_RANGE;
+				rTop.right = ptEnd.x;
+				rTop.bottom = ptBeg.y;
+
+				LPtoDP(hdc, (LPPOINT)&rTop, 2);
+
+				rLeft.left = ptBeg.x - INVALIDE_RANGE;
+				rLeft.top = ptBeg.y;
+				rLeft.right = ptBeg.x;
+				rLeft.bottom = ptEnd.y;
+
+				LPtoDP(hdc, (LPPOINT)&rLeft, 2);
+
+				rRight.left = ptEnd.x;
+				rRight.top = ptBeg.y;
+				rRight.right = ptEnd.x + INVALIDE_RANGE;
+				rRight.bottom = ptEnd.y;
+
+				LPtoDP(hdc, (LPPOINT)&rRight, 2);
+
+				InvalidateRect(hWnd, &rBot, TRUE);
+				InvalidateRect(hWnd, &rTop, TRUE);
+				InvalidateRect(hWnd, &rLeft, TRUE);
+				InvalidateRect(hWnd, &rRight, TRUE);
+
+				ReleaseDC(hWnd, hdc);
+			}
 			pMouse.x = LOWORD(lParam);
 			pMouse.y = HIWORD(lParam);
 			break;
 		}
+		case WM_LBUTTONUP:
+			if (fBlocking)
+			{
+
+				ptBoxBeg = ptBeg;
+				ptBoxEnd.x = LOWORD(lParam);
+				ptBoxEnd.y = HIWORD(lParam);
+
+				SetCursor(LoadCursor(NULL, IDC_ARROW));
+
+				fBlocking = FALSE;
+
+				hdc = GetDC(hWnd);
+
+				MappingInit(hdc, sClient, iMapMode);
+
+
+				SelectObject(hdc, GetStockObject(DC_BRUSH));
+				SelectObject(hdc, GetStockObject(DC_PEN));
+				SetDCPenColor(hdc, rgbRectPenColor);
+				SetDCBrushColor(hdc, rgbRectBrushColor);
+				Rectangle(hdc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
+
+				RECT rCurrentRect;
+				rCurrentRect.left = ptBeg.x;
+				rCurrentRect.top = ptBeg.y;
+				rCurrentRect.right = ptEnd.x;
+				rCurrentRect.bottom = ptEnd.y;
+
+				_Rectangle rRectangle(rCurrentRect, rgbRectBrushColor, rgbRectPenColor);
+
+				lObjectList.add(&rRectangle);
+
+				InvalidateRect(hWnd, NULL, TRUE);
+				ReleaseDC(hWnd, hdc);
+			}
+			return 0;
 		case WM_MBUTTONDOWN:{
-			switch (iAnisotropicOn){
+			switch (iMapMode){
 				case MM_ANISOTROPIC:{
-					iAnisotropicOn = MM_ISOTROPIC;
+					iMapMode = MM_ISOTROPIC;
 					break;
 				}
 				case MM_ISOTROPIC:{
-					iAnisotropicOn = MM_ANISOTROPIC;
+					iMapMode = MM_ANISOTROPIC;
 					break;
 				}
 			}
