@@ -201,55 +201,23 @@ _Rectangle CreateRectangle(const POINT& pMouse){
 	return rRectangle;
 }
 
-void CreateThenDrawThenAdd(HDC hdc, SIZE& size, const int iMapMode, const int Figure, POINT& pMouse, List2* list){
-	MappingInit(hdc, size, iMapMode);
-	DPtoLP(hdc, &pMouse, 1);
-	list -> toEnd();
-	switch (Figure) {
-		case F_CIRCLE:{
-			Ellipsis eEllipse = CreateCircle(pMouse);
-			
-			eEllipse.draw(hdc);
-			list -> add(&eEllipse);
-			break;
-		}
-		case F_TRIANGLE:{
-			Triangle tTriangle = CreateTriangle(pMouse);
-
-			tTriangle.draw(hdc);
-			list -> add(&tTriangle);
-			break;
-		}
-		case F_RECTANGLE:{
-			_Rectangle rRectangle = CreateRectangle(pMouse);
-
-			rRectangle.draw(hdc);
-			list -> add(&rRectangle);
-			break;
-		}
-	}
+BOOL MouseInDocument(const POINT& pMouse){
+	return (pMouse.x < DOC_SIZE_X && pMouse.y < DOC_SIZE_Y);
 }
-
-void DrawBoxOutline(HDC hdc, const POINT& ptBeg, POINT& ptEnd)
-{
-	SetROP2(hdc, R2_COPYPEN);
-	Rectangle(hdc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
-}
-
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	HDC          hdcMem;
-	HBITMAP      hbmMem;
-	HANDLE       hOld;
+	static HDC          hdcMem;
+	static HBITMAP      hbmMem;
+	static HANDLE       hOld;
 
 	static BOOL fBlocking;
 	static POINT ptBeg, ptEnd, ptBoxBeg, ptBoxEnd;
 	srand(rand());
-	static POINT pMouse, pPrevPoint;
+	static POINT pMouse;
 	int wmId, wmEvent;
 	PAINTSTRUCT ps;
-	HDC hdc;
+	static HDC hdc;
 	static List2 lObjectList;
 	static INT iMapMode = MM_ANISOTROPIC;
 	static SIZE sClient;
@@ -273,128 +241,133 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			break;
 		case WM_SIZE:
+			SelectObject(hdcMem, hOld);
+			DeleteObject(hbmMem);
+			DeleteDC(hdcMem);
+
+			hdcMem = CreateCompatibleDC(hdc);
+			hbmMem = CreateCompatibleBitmap(hdc, sClient.cx, sClient.cy);
+
+			hOld = SelectObject(hdcMem, hbmMem);
+
 			sClient.cx = LOWORD(lParam);
 			sClient.cy = HIWORD(lParam);
 			return 0;
 		case WM_PAINT:{
 			hdc = BeginPaint(hWnd, &ps);
-			hdcMem = CreateCompatibleDC(hdc);
-			hbmMem = CreateCompatibleBitmap(hdc, sClient.cx, sClient.cy);
-			hOld = SelectObject(hdcMem, hbmMem);
 
 			MappingInit(hdcMem, sClient, iMapMode);
-			
-			Rectangle(hdcMem, -1, -1, DOC_SIZE_X + 1, DOC_SIZE_Y + 1);
+
+			SelectObject(hdc, GetStockObject(DC_PEN));
+			SetDCPenColor(hdc, RGB(255,255,255));
+			Rectangle(hdcMem, -3, -3, DOC_SIZE_X + 3, DOC_SIZE_Y + 3);
 			lObjectList.draw(hdcMem);
 			SelectObject(hdcMem, GetStockObject(DC_BRUSH));
 			SetDCBrushColor(hdcMem, RGB(255, 255, 255));
 			SelectObject(hdcMem, GetStockObject(DC_PEN));
 			SetDCPenColor(hdcMem, RGB(0, 0, 0));
-			Rectangle(hdcMem, DOC_SIZE_X - DOC_SIZE_X / EDGESCREEN_SQUARE, DOC_SIZE_Y - DOC_SIZE_Y / EDGESCREEN_SQUARE, DOC_SIZE_X, DOC_SIZE_Y);
+			Rectangle(hdcMem, DOC_SIZE_X - (DOC_SIZE_X / EDGESCREEN_SQUARE), DOC_SIZE_Y - (DOC_SIZE_Y / EDGESCREEN_SQUARE), DOC_SIZE_X, DOC_SIZE_Y);
 
 			MappingInit(hdc, sClient, iMapMode);
 
 			BitBlt(hdc, 0, 0, DOC_SIZE_X, DOC_SIZE_Y, hdcMem, 0, 0, SRCCOPY);
 
-			SelectObject(hdcMem, hOld);
-			DeleteObject(hbmMem);
-			DeleteDC(hdcMem);
-
-			EndPaint(hWnd, &ps);
+			if (iMapMode == MM_ISOTROPIC){
+				SelectObject(hdc, GetStockObject(DC_BRUSH));
+				SetDCBrushColor(hdc, 0);
+				Rectangle(hdc, DOC_SIZE_X, 0, DOC_SIZE_X * 10, DOC_SIZE_Y);
+				Rectangle(hdc, 0, DOC_SIZE_Y, DOC_SIZE_X, DOC_SIZE_Y * 10);
+			}
 			break;
 		}
 		case WM_LBUTTONDBLCLK:{
-			hdc = GetDC(hWnd);
-			CreateThenDrawThenAdd(hdc, sClient, iMapMode, F_TRIANGLE, pMouse, &lObjectList);
-			ReleaseDC(hWnd, hdc);
+			Triangle tTriangle = CreateTriangle(pMouse);
+
+			tTriangle.draw(hdc);
+			lObjectList.add(&tTriangle);
 			KillTimer(hWnd, ID_TIMER);
 			break;
 		}
 		case WM_KEYDOWN:{
-			hdc = GetDC(hWnd);
-			switch (wParam){
-				case 'O':{
-					CreateThenDrawThenAdd(hdc, sClient, iMapMode, F_CIRCLE, pMouse, &lObjectList);
-					break;
-				}
-				case 'T':{
-					CreateThenDrawThenAdd(hdc, sClient, iMapMode, F_TRIANGLE, pMouse, &lObjectList);
-					break;
-				}
-				case 'R':{
-					CreateThenDrawThenAdd(hdc, sClient, iMapMode, F_RECTANGLE, pMouse, &lObjectList);
-					break;
-				}
+							if (wParam == 'O' || wParam == 'T' || wParam == 'R'){
+								GObject* object = 0;
+								if (!(iMapMode == MM_ISOTROPIC && !MouseInDocument(pMouse))){
+									lObjectList.toEnd();
+									switch (wParam){
+									case 'O':{
+													object = new Ellipsis(CreateCircle(pMouse));
+													break;
+									}
+									case 'T':{
+													object = new Triangle(CreateTriangle(pMouse));
+													break;
+									}
+									case 'R':{
+													object = new _Rectangle(CreateRectangle(pMouse));
+													break;
+									}
+									}
+									object->draw(hdc);
+									lObjectList.add(object);
+								}
+							}
+						break;
+		}
+		case WM_LBUTTONDOWN:{
+			ptBeg = ptEnd = pMouse;
+
+			if (!(iMapMode == MM_ISOTROPIC && !MouseInDocument(ptBeg))){
+				rgbRectPenColor = RGB(rand() % 255, rand() % 255, rand() % 255);
+				rgbRectBrushColor = RGB(rand() % 255, rand() % 255, rand() % 255);
+				
+				SelectObject(hdc, GetStockObject(DC_BRUSH));
+				SelectObject(hdc, GetStockObject(DC_PEN));
+				SetDCPenColor(hdc, rgbRectPenColor);
+				SetDCBrushColor(hdc, rgbRectBrushColor);
+				Rectangle(hdc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
+				SetCursor(LoadCursor(NULL, IDC_CROSS));
+
+				fBlocking = TRUE;
 			}
 			break;
 		}
-		case WM_LBUTTONDOWN:{
-			ptBeg.x = ptEnd.x = LOWORD(lParam);
-			ptBeg.y = ptEnd.y = HIWORD(lParam);
-			rgbRectPenColor = RGB(rand() % 255, rand() % 255, rand() % 255);
-			rgbRectBrushColor = RGB(rand() % 255, rand() % 255, rand() % 255);
-			hdc = GetDC(hWnd);
-			MappingInit(hdc, sClient, iMapMode);
-			DPtoLP(hdc, &ptBeg, 1);
-			DPtoLP(hdc, &ptEnd, 1);
-
-			SelectObject(hdc, GetStockObject(DC_BRUSH));
-			SelectObject(hdc, GetStockObject(DC_PEN));
-			SetDCPenColor(hdc, rgbRectPenColor);
-			SetDCBrushColor(hdc, rgbRectBrushColor);
-			DrawBoxOutline(hdc, ptBeg, ptEnd);
-			ReleaseDC(hWnd, hdc);
-			SetCursor(LoadCursor(NULL, IDC_CROSS));
-
-			fBlocking = TRUE;
-			return 0;
-		}
 		case WM_RBUTTONDOWN:{
-			hdc = GetDC(hWnd);
-			CreateThenDrawThenAdd(hdc, sClient, iMapMode, F_CIRCLE, pMouse, &lObjectList);
-			ReleaseDC(hWnd, hdc);
+			if (!(iMapMode == MM_ISOTROPIC && !MouseInDocument(pMouse))){
+				lObjectList.toEnd();
+				Ellipsis eEllipse = CreateCircle(pMouse);
+
+				eEllipse.draw(hdc);
+				lObjectList.add(&eEllipse);
+			}
 			break;
 		}
 		case WM_MOUSEMOVE:{
+			pMouse.x = LOWORD(lParam);
+			pMouse.y = HIWORD(lParam);
+
+			DPtoLP(hdc, &pMouse, 1);
+
 			if (fBlocking)
 			{
 				SetCursor(LoadCursor(NULL, IDC_CROSS));
 
-				hdc = GetDC(hWnd);
-				MappingInit(hdc, sClient, iMapMode);
-
-				SetROP2(hdc, R2_BLACK);
-				Rectangle(hdc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
+				BitBlt(hdc, ptBeg.x, ptBeg.y, ptEnd.x - ptBeg.x, ptEnd.y - ptBeg.y, hdcMem, ptBeg.x, ptBeg.y, SRCCOPY);
 
 				ptEnd = pMouse;
-
-				DPtoLP(hdc, &ptEnd, 1);
 
 				SelectObject(hdc, GetStockObject(DC_BRUSH));
 				SelectObject(hdc, GetStockObject(DC_PEN));
 				SetDCPenColor(hdc, rgbRectPenColor);
 				SetDCBrushColor(hdc, rgbRectBrushColor);
-				DrawBoxOutline(hdc, ptBeg, ptEnd);
-
-				ReleaseDC(hWnd, hdc);
+				Rectangle(hdc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
 			}
-			pMouse.x = LOWORD(lParam);
-			pMouse.y = HIWORD(lParam);
 			break;
 		}
 		case WM_LBUTTONUP:
-			if (fBlocking)
-			{
-
-				ptBoxBeg = ptBeg;
-				ptBoxEnd.x = LOWORD(lParam);
-				ptBoxEnd.y = HIWORD(lParam);
-
+			if (fBlocking){
 				SetCursor(LoadCursor(NULL, IDC_ARROW));
 
 				fBlocking = FALSE;
-
-				hdc = GetDC(hWnd);
 
 				MappingInit(hdc, sClient, iMapMode);
 
@@ -417,8 +390,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				lObjectList.add(&rRectangle);
 
 				InvalidateRect(hWnd, NULL, TRUE);
-
-				ReleaseDC(hWnd, hdc);
 			}
 			return 0;
 		case WM_MBUTTONDOWN:{
@@ -432,11 +403,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					break;
 				}
 			}
-				InvalidateRect(hWnd, NULL, TRUE);
+			RECT rWindow;
+			GetWindowRect(hWnd, &rWindow);
+			MoveWindow(hWnd, rWindow.left, rWindow.top, rWindow.right - rWindow.left, rWindow.bottom - rWindow.top -1, TRUE);
+			MoveWindow(hWnd, rWindow.left, rWindow.top, rWindow.right - rWindow.left, rWindow.bottom - rWindow.top +1, TRUE);
 			break;
 		}
 		case WM_ERASEBKGND:{
-							   break;
+			break;
 		}
 		case WM_DESTROY:
 			PostQuitMessage(0);
