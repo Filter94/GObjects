@@ -3,6 +3,9 @@
 
 #include "stdafx.h"
 
+#define EDGESCREEN_SQUARE 20
+#define DOC_SIZE_X 1000
+#define DOC_SIZE_Y 1000
 #define MAX_HOROFFSET 250
 #define MAX_VEROFFSET 250
 #define MAX_CIRCLE_RADIUS 250
@@ -145,7 +148,7 @@ void MappingInit(HDC hdc, SIZE& size, const int iMapMode) {
 			break;
 		}
 	}
-	SetWindowExtEx(hdc, 1000, 1000, NULL);
+	SetWindowExtEx(hdc, DOC_SIZE_X, DOC_SIZE_X, NULL);
 	SetViewportExtEx(hdc, size.cx, size.cy, NULL);
 }
 
@@ -227,14 +230,19 @@ void CreateThenDrawThenAdd(HDC hdc, SIZE& size, const int iMapMode, const int Fi
 	}
 }
 
-void DrawBoxOutline(HDC hdc, POINT& ptBeg, POINT& ptEnd)
+void DrawBoxOutline(HDC hdc, const POINT& ptBeg, POINT& ptEnd)
 {
 	SetROP2(hdc, R2_COPYPEN);
 	Rectangle(hdc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
-}
+}
+
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	HDC          hdcMem;
+	HBITMAP      hbmMem;
+	HANDLE       hOld;
+
 	static BOOL fBlocking;
 	static POINT ptBeg, ptEnd, ptBoxBeg, ptBoxEnd;
 	srand(rand());
@@ -270,13 +278,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		case WM_PAINT:{
 			hdc = BeginPaint(hWnd, &ps);
+			hdcMem = CreateCompatibleDC(hdc);
+			hbmMem = CreateCompatibleBitmap(hdc, sClient.cx, sClient.cy);
+			hOld = SelectObject(hdcMem, hbmMem);
+
+			MappingInit(hdcMem, sClient, iMapMode);
+			
+			Rectangle(hdcMem, -1, -1, DOC_SIZE_X + 1, DOC_SIZE_Y + 1);
+			lObjectList.draw(hdcMem);
+			SelectObject(hdcMem, GetStockObject(DC_BRUSH));
+			SetDCBrushColor(hdcMem, RGB(255, 255, 255));
+			SelectObject(hdcMem, GetStockObject(DC_PEN));
+			SetDCPenColor(hdcMem, RGB(0, 0, 0));
+			Rectangle(hdcMem, DOC_SIZE_X - DOC_SIZE_X / EDGESCREEN_SQUARE, DOC_SIZE_Y - DOC_SIZE_Y / EDGESCREEN_SQUARE, DOC_SIZE_X, DOC_SIZE_Y);
+
 			MappingInit(hdc, sClient, iMapMode);
-			lObjectList.draw(hdc);
-			SelectObject(hdc, GetStockObject(DC_BRUSH));
-			SetDCBrushColor(hdc, RGB(255,255,255));
-			SelectObject(hdc, GetStockObject(DC_PEN));
-			SetDCPenColor(hdc, RGB(0,0,0));
-			Rectangle(hdc, 900, 900, 1000, 1000);
+
+			BitBlt(hdc, 0, 0, DOC_SIZE_X, DOC_SIZE_Y, hdcMem, 0, 0, SRCCOPY);
+
+			SelectObject(hdcMem, hOld);
+			DeleteObject(hbmMem);
+			DeleteDC(hdcMem);
+
 			EndPaint(hWnd, &ps);
 			break;
 		}
@@ -340,6 +363,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				hdc = GetDC(hWnd);
 				MappingInit(hdc, sClient, iMapMode);
 
+				SetROP2(hdc, R2_BLACK);
+				Rectangle(hdc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
+
 				ptEnd = pMouse;
 
 				DPtoLP(hdc, &ptEnd, 1);
@@ -349,40 +375,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				SetDCPenColor(hdc, rgbRectPenColor);
 				SetDCBrushColor(hdc, rgbRectBrushColor);
 				DrawBoxOutline(hdc, ptBeg, ptEnd);
-
-				RECT rBot, rTop, rLeft, rRight;
-				rBot.left = ptBeg.x;
-				rBot.top = ptEnd.y;
-				rBot.right = ptEnd.x;
-				rBot.bottom = ptEnd.y + INVALIDE_RANGE;
-
-				LPtoDP(hdc, (LPPOINT)&rBot, 2);
-
-				rTop.left = ptBeg.x;
-				rTop.top = ptBeg.y - INVALIDE_RANGE;
-				rTop.right = ptEnd.x;
-				rTop.bottom = ptBeg.y;
-
-				LPtoDP(hdc, (LPPOINT)&rTop, 2);
-
-				rLeft.left = ptBeg.x - INVALIDE_RANGE;
-				rLeft.top = ptBeg.y;
-				rLeft.right = ptBeg.x;
-				rLeft.bottom = ptEnd.y;
-
-				LPtoDP(hdc, (LPPOINT)&rLeft, 2);
-
-				rRight.left = ptEnd.x;
-				rRight.top = ptBeg.y;
-				rRight.right = ptEnd.x + INVALIDE_RANGE;
-				rRight.bottom = ptEnd.y;
-
-				LPtoDP(hdc, (LPPOINT)&rRight, 2);
-
-				InvalidateRect(hWnd, &rBot, TRUE);
-				InvalidateRect(hWnd, &rTop, TRUE);
-				InvalidateRect(hWnd, &rLeft, TRUE);
-				InvalidateRect(hWnd, &rRight, TRUE);
 
 				ReleaseDC(hWnd, hdc);
 			}
@@ -406,7 +398,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 				MappingInit(hdc, sClient, iMapMode);
 
-
 				SelectObject(hdc, GetStockObject(DC_BRUSH));
 				SelectObject(hdc, GetStockObject(DC_PEN));
 				SetDCPenColor(hdc, rgbRectPenColor);
@@ -421,9 +412,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 				_Rectangle rRectangle(rCurrentRect, rgbRectBrushColor, rgbRectPenColor);
 
+				lObjectList.toEnd();
+
 				lObjectList.add(&rRectangle);
 
-				InvalidateRect(hWnd, NULL, TRUE);
+				InvalidateRect(hWnd, NULL, TRUE);
+
 				ReleaseDC(hWnd, hdc);
 			}
 			return 0;
@@ -440,6 +434,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 				InvalidateRect(hWnd, NULL, TRUE);
 			break;
+		}
+		case WM_ERASEBKGND:{
+							   break;
 		}
 		case WM_DESTROY:
 			PostQuitMessage(0);
