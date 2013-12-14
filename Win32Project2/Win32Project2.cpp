@@ -4,7 +4,7 @@
 #include "stdafx.h"
 
 #define EDGESCREEN_SQUARE 20
-#define DOC_SIZE_X 1000
+#define DOC_SIZE_X 1500
 #define DOC_SIZE_Y 1000
 #define MAX_HOROFFSET 250
 #define MAX_VEROFFSET 250
@@ -148,7 +148,7 @@ void MappingInit(HDC hdc, SIZE& size, const int iMapMode) {
 			break;
 		}
 	}
-	SetWindowExtEx(hdc, DOC_SIZE_X, DOC_SIZE_X, NULL);
+	SetWindowExtEx(hdc, DOC_SIZE_X, DOC_SIZE_Y, NULL);
 	SetViewportExtEx(hdc, size.cx, size.cy, NULL);
 }
 
@@ -225,6 +225,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	switch (message)
 	{
+	case WM_CREATE:{
+					   SendMessage(hWnd, WM_PAINT, 0, 0);
+					   break;
+	}
 		case WM_COMMAND:
 			wmId = LOWORD(wParam);
 			wmEvent = HIWORD(wParam);
@@ -241,6 +245,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			break;
 		case WM_SIZE:
+			sClient.cx = LOWORD(lParam);
+			sClient.cy = HIWORD(lParam);
+
 			SelectObject(hdcMem, hOld);
 			DeleteObject(hbmMem);
 			DeleteDC(hdcMem);
@@ -249,11 +256,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			hbmMem = CreateCompatibleBitmap(hdc, sClient.cx, sClient.cy);
 
 			hOld = SelectObject(hdcMem, hbmMem);
-
-			sClient.cx = LOWORD(lParam);
-			sClient.cy = HIWORD(lParam);
 			return 0;
 		case WM_PAINT:{
+			EndPaint(hWnd, &ps);
 			hdc = BeginPaint(hWnd, &ps);
 
 			MappingInit(hdcMem, sClient, iMapMode);
@@ -274,7 +279,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			if (iMapMode == MM_ISOTROPIC){
 				SelectObject(hdc, GetStockObject(DC_BRUSH));
-				SetDCBrushColor(hdc, 0);
+				SetDCBrushColor(hdc, RGB(0, 0, 0));
+				SelectObject(hdc, GetStockObject(DC_PEN));
+				SetDCPenColor(hdc, RGB(0, 0, 0));
 				Rectangle(hdc, DOC_SIZE_X, 0, DOC_SIZE_X * 10, DOC_SIZE_Y);
 				Rectangle(hdc, 0, DOC_SIZE_Y, DOC_SIZE_X, DOC_SIZE_Y * 10);
 			}
