@@ -19,6 +19,22 @@
 #endif
 // Следующие стандартные значения для новых объектов
 //
+
+#define EDGESCREEN_SQUARE 20
+#define DOC_SIZE_X 4000
+#define DOC_SIZE_Y 3000
+#define MAX_HOROFFSET 250
+#define MAX_VEROFFSET 250
+#define MAX_CIRCLE_RADIUS 250
+#define MAX_RGB_RANGE 255
+#define MAX_LOADSTRING 100
+#define F_TRIANGLE 0
+#define F_RECTANGLE 1
+#define F_CIRCLE 2
+#define ID_TIMER 1
+#define INVALIDE_RANGE 30
+#define GAP 30
+
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 
