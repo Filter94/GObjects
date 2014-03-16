@@ -17,6 +17,7 @@
 #include <time.h>
 #include <string>
 #include <commctrl.h>
+#include <cmath>
 
 
 // TODO: Установите здесь ссылки на дополнительные заголовки, требующиеся для программы

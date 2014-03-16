@@ -131,7 +131,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
 	wcex.cbSize = sizeof(WNDCLASSEX);
 
-	wcex.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+	wcex.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS | !SBS_VERT |! SBS_HORZ;
 	wcex.lpfnWndProc = WndProc;
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
@@ -153,13 +153,13 @@ ATOM RegisterClassChild(HINSTANCE hInstance)
 
 	wcex.cbSize = sizeof(WNDCLASSEX);
 
-	wcex.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+	wcex.style = CS_DBLCLKS;
 	wcex.lpfnWndProc = WndProcChild;
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = hInstance;
-	//wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_SMALL));
-	//wcex.hCursor = LoadCursor(hInstance, MAKEINTRESOURCE(IDC_CURSOR3));
+	wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_SMALL));
+	wcex.hCursor = LoadCursor(hInstance, MAKEINTRESOURCE(IDC_ARROW));
 	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	wcex.lpszMenuName = NULL;
 	wcex.lpszClassName = L"Child";
@@ -174,7 +174,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	hInst = hInstance; // —охранить дескриптор экземпл€ра в глобальной переменной
 
-	hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW | WS_VSCROLL | WS_HSCROLL,
+	hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
 
 	if (!hWnd)
@@ -280,7 +280,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	HDC hdc;
 	PAINTSTRUCT ps;
 	int wmId, wmEvent, cxClient, cyClient;
-	static HWND hwndToolBar, hwndStatusBar, hWndChild;
+	static HWND hwndStatusBar, hWndChild;
 	static HMENU hMenu;
 
 	switch (message)
@@ -289,7 +289,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 					  hWndChild = CreateWindow(L"Child", szTitle, WS_CHILD | WS_VISIBLE | WS_VSCROLL, CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, hWnd, (HMENU)HWNDCHILD, hInst, NULL);
 					  hToolbar = OnInitToolbarDialog(hWnd, hWnd, 0);
-
+					  
 					  break;
 	}
 	case WM_SETFOCUS:
@@ -307,10 +307,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 					cxClient = LOWORD(lParam);
 					cyClient = HIWORD(lParam);
-					RECT rect;
-					GetWindowRect(hwndToolBar, &rect);
-					MoveWindow(hWndChild, 0, 0, cxClient, cyClient, TRUE);
-					SendMessage(hwndToolBar, WM_SIZE, 0, 0);
+					RECT toolbarSize;
+					GetWindowRect(hToolbar, &toolbarSize);
+					MoveWindow(hWndChild, 0, toolbarSize.bottom - toolbarSize.top, cxClient, cyClient - (toolbarSize.bottom - toolbarSize.top), TRUE);
 					break;
 	}
 	case WM_PAINT:
@@ -476,6 +475,7 @@ LRESULT CALLBACK WndProcChild(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 	case WM_MOUSEMOVE:{
 		pMouse.x = LOWORD(lParam);
 		pMouse.y = HIWORD(lParam);
+		SetCursor(LoadCursor(NULL, IDC_ARROW));
 		hdc = GetDC(hWnd);
 		SetViewportOrgEx(hdc, pBeginPoint.x - iHscrollPos, pBeginPoint.y - iVscrollPos, NULL);
 		DPtoLP(hdc, &pMouse, 1);
