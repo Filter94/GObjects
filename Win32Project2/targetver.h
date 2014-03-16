@@ -1,8 +1,11 @@
 #pragma once
 
-// Включение SDKDDKVer.h обеспечивает определение самой последней доступной платформы Windows.
+#ifndef WINVER
+#define WINVER _WIN32_WINNT_WINXP		// Originally 0x0600
+#endif
 
-// Если требуется выполнить сборку приложения для предыдущей версии Windows, включите WinSDKVer.h и
-// задайте для макроса _WIN32_WINNT значение поддерживаемой платформы перед включением SDKDDKVer.h.
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT _WIN32_WINNT_WINXP	// Originally 0x0600
+#endif 
 
 #include <SDKDDKVer.h>

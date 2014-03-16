@@ -34,6 +34,7 @@
 #define ID_TIMER 1
 #define INVALIDE_RANGE 30
 #define GAP 30
+#define HWNDCHILD			   6
 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS

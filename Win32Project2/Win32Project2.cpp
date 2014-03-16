@@ -2,10 +2,7 @@
 //
 
 #include "stdafx.h"
-
-
-
-using std::queue;
+#include <windows.h>
 
 // Глобальные переменные:
 HINSTANCE hInst;								// текущий экземпляр
@@ -14,6 +11,8 @@ TCHAR szWindowClass[MAX_LOADSTRING];			// имя класса главного окна
 
 // Отправить объявления функций, включенных в этот модуль кода:
 ATOM				MyRegisterClass(HINSTANCE hInstance);
+ATOM				RegisterClassChild(HINSTANCE hInstance);
+LRESULT CALLBACK	WndProcChild(HWND, UINT, WPARAM, LPARAM);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
@@ -34,6 +33,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadString(hInstance, IDC_WIN32PROJECT2, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
+	RegisterClassChild(hInstance);
 
 	// Выполнить инициализацию приложения:
 	if (!InitInstance(hInstance, nCmdShow))
@@ -56,13 +56,75 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	return (int)msg.wParam;
 }
 
+HINSTANCE g_hInst;
+
+#define IDC_TOOLBAR			13990
+
+HWND OnInitToolbarDialog(HWND hWnd, HWND hWndFocus, LPARAM lParam)
+{
+	// Load and register Toolbar control class
+	INITCOMMONCONTROLSEX iccx;
+	iccx.dwSize = sizeof(INITCOMMONCONTROLSEX);
+	iccx.dwICC = ICC_BAR_CLASSES;
+	if (!InitCommonControlsEx(&iccx))
+		return 0;
+
+	// Create the Toolbar control
+	RECT rc = { 0, 0, 0, 0 };
+	HWND hToolbar = CreateWindowEx(0, TOOLBARCLASSNAME, 0,
+		TBSTYLE_FLAT | CCS_ADJUSTABLE | CCS_NODIVIDER | WS_CHILD | WS_VISIBLE,
+		rc.left, rc.top, rc.right, rc.bottom,
+		hWnd, (HMENU)IDC_TOOLBAR, g_hInst, 0);
 
 
-//
-//  ФУНКЦИЯ: MyRegisterClass()
-//
-//  НАЗНАЧЕНИЕ: регистрирует класс окна.
-//
+	/////////////////////////////////////////////////////////////////////////
+	// Setup and add buttons to Toolbar.
+	// 
+
+	// If an application uses the CreateWindowEx function to create the 
+	// toolbar, the application must send this message to the toolbar before 
+	// sending the TB_ADDBITMAP or TB_ADDBUTTONS message. The CreateToolbarEx 
+	// function automatically sends TB_BUTTONSTRUCTSIZE, and the size of the 
+	// TBBUTTON structure is a parameter of the function.
+	SendMessage(hToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+
+	// Add images
+
+	TBADDBITMAP tbAddBmp = { 0 };
+	tbAddBmp.hInst = HINST_COMMCTRL;
+	tbAddBmp.nID = IDB_STD_SMALL_COLOR;
+
+	SendMessage(hToolbar, TB_ADDBITMAP, 0, (WPARAM)&tbAddBmp);
+
+	// Add buttons
+
+	const int numButtons = 7;
+	TBBUTTON tbButtons[numButtons] =
+	{
+		{ MAKELONG(STD_FILENEW, 0), NULL, TBSTATE_ENABLED,
+		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"New" },
+		{ MAKELONG(STD_FILEOPEN, 0), NULL, TBSTATE_ENABLED,
+		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"Open" },
+		{ MAKELONG(STD_FILESAVE, 0), NULL, 0,
+		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"Save" },
+		{ MAKELONG(0, 0), NULL, 0,
+		TBSTYLE_SEP, { 0 }, 0, (INT_PTR)L"" }, // Separator
+		{ MAKELONG(STD_COPY, 0), NULL, TBSTATE_ENABLED,
+		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"Copy" },
+		{ MAKELONG(STD_CUT, 0), NULL, TBSTATE_ENABLED,
+		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"Cut" },
+		{ MAKELONG(STD_PASTE, 0), NULL, TBSTATE_ENABLED,
+		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"Paste" }
+	};
+
+	SendMessage(hToolbar, TB_ADDBUTTONS, numButtons, (LPARAM)tbButtons);
+
+	// Tell the toolbar to resize itself, and show it.
+	SendMessage(hToolbar, TB_AUTOSIZE, 0, 0);
+
+	return hToolbar;
+}
+
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
 	WNDCLASSEX wcex;
@@ -84,16 +146,28 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	return RegisterClassEx(&wcex);
 }
 
-//
-//   ФУНКЦИЯ: InitInstance(HINSTANCE, int)
-//
-//   НАЗНАЧЕНИЕ: сохраняет обработку экземпляра и создает главное окно.
-//
-//   КОММЕНТАРИИ:
-//
-//        В данной функции дескриптор экземпляра сохраняется в глобальной переменной, а также
-//        создается и выводится на экран главное окно программы.
-//
+
+ATOM RegisterClassChild(HINSTANCE hInstance)
+{
+	WNDCLASSEX wcex;
+
+	wcex.cbSize = sizeof(WNDCLASSEX);
+
+	wcex.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+	wcex.lpfnWndProc = WndProcChild;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance;
+	//wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_SMALL));
+	//wcex.hCursor = LoadCursor(hInstance, MAKEINTRESOURCE(IDC_CURSOR3));
+	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wcex.lpszMenuName = NULL;
+	wcex.lpszClassName = L"Child";
+	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+
+	return RegisterClassEx(&wcex);
+}
+
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	HWND hWnd;
@@ -198,9 +272,65 @@ void DrawBoxOutline(HDC hdc, POINT ptBeg, POINT ptEnd)
 	SetROP2(hdc, R2_NOT);
 	SelectObject(hdc, GetStockObject(NULL_BRUSH));
 	Rectangle(hdc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
-}
+}
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	static HWND hToolbar;
+	HDC hdc;
+	PAINTSTRUCT ps;
+	int wmId, wmEvent, cxClient, cyClient;
+	static HWND hwndToolBar, hwndStatusBar, hWndChild;
+	static HMENU hMenu;
+
+	switch (message)
+	{
+	case WM_CREATE:
+	{
+					  hWndChild = CreateWindow(L"Child", szTitle, WS_CHILD | WS_VISIBLE | WS_VSCROLL, CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, hWnd, (HMENU)HWNDCHILD, hInst, NULL);
+					  hToolbar = OnInitToolbarDialog(hWnd, hWnd, 0);
+
+					  break;
+	}
+	case WM_SETFOCUS:
+	{
+						SetFocus(hWndChild);
+						break;
+	}
+	case WM_COMMAND:
+	{
+					   wmId = LOWORD(wParam);
+					   wmEvent = HIWORD(wParam);
+					   break;
+	}
+	case WM_SIZE:
+	{
+					cxClient = LOWORD(lParam);
+					cyClient = HIWORD(lParam);
+					RECT rect;
+					GetWindowRect(hwndToolBar, &rect);
+					MoveWindow(hWndChild, 0, 0, cxClient, cyClient, TRUE);
+					SendMessage(hwndToolBar, WM_SIZE, 0, 0);
+					break;
+	}
+	case WM_PAINT:
+	{
+					 hdc = BeginPaint(hWnd, &ps);
+					 EndPaint(hWnd, &ps);
+					 break;
+	}
+	case WM_DESTROY:
+	{
+					   PostQuitMessage(0);
+					   break;
+	}
+	default:
+		return DefWindowProc(hWnd, message, wParam, lParam);
+	}
+	return 0;
+}
+
+LRESULT CALLBACK WndProcChild(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	static HDC          hdcMemDoc, hdcMemBuf;
 	static HBITMAP      hbmMemBuf, hbmMemDoc, hOld;
@@ -249,10 +379,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_SIZE:
 		sClient.cx = LOWORD(lParam);
 		sClient.cy = HIWORD(lParam);
-		iVscrollPos = 0;
-		iHscrollPos = 0;
-		SetScrollPos(hWnd, SB_VERT, iVscrollPos, TRUE);
-		SetScrollPos(hWnd, SB_HORZ, iHscrollPos, TRUE);
 		cHorScrollMax = (DOC_SIZE_X - sClient.cx) + GAP >= 0 ? (DOC_SIZE_X - sClient.cx) / 2 + GAP : 0;
 		cVerScrollMax = (DOC_SIZE_Y - sClient.cy) + GAP >= 0 ? (DOC_SIZE_Y - sClient.cy) / 2 + GAP : 0;
 		SetScrollRange(hWnd, SB_HORZ, -cHorScrollMax, cHorScrollMax, TRUE);
@@ -283,7 +409,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		BitBlt(hdcMemBuf, pBeginPoint.x - iHscrollPos, pBeginPoint.y - iVscrollPos, DOC_SIZE_X, DOC_SIZE_Y, hdcMemDoc, 0, 0, SRCCOPY);
 
-		BitBlt(hdc, 0,0 , sClient.cx, sClient.cx, hdcMemBuf, 0, 0, SRCCOPY);
+		BitBlt(hdc, 0,0 , sClient.cx, sClient.cy, hdcMemBuf, 0, 0, SRCCOPY);
 		EndPaint(hWnd, &ps);
 		break;
 	}
@@ -360,7 +486,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			ptEnd = pMouse;
 
-			DrawBoxOutline(hdc, ptBeg, ptEnd);
+			DrawBoxOutline(hdc, ptBeg, ptEnd);
+
 		}
 		ReleaseDC(hWnd, hdc);
 		break;
