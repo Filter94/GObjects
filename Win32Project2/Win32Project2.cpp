@@ -60,7 +60,7 @@ HINSTANCE g_hInst;
 
 #define IDC_TOOLBAR			13990
 
-HWND OnInitToolbarDialog(HWND hWnd, HWND hWndFocus, LPARAM lParam)
+HWND OnInitToolbarDialog(HWND hWnd)
 {
 	// Load and register Toolbar control class
 	INITCOMMONCONTROLSEX iccx;
@@ -71,58 +71,68 @@ HWND OnInitToolbarDialog(HWND hWnd, HWND hWndFocus, LPARAM lParam)
 
 	// Create the Toolbar control
 	RECT rc = { 0, 0, 0, 0 };
-	HWND hToolbar = CreateWindowEx(0, TOOLBARCLASSNAME, 0,
-		TBSTYLE_FLAT | CCS_ADJUSTABLE | CCS_NODIVIDER | WS_CHILD | WS_VISIBLE,
-		rc.left, rc.top, rc.right, rc.bottom,
-		hWnd, (HMENU)IDC_TOOLBAR, g_hInst, 0);
 
+	const int numButtons = 3;
 
-	/////////////////////////////////////////////////////////////////////////
-	// Setup and add buttons to Toolbar.
-	// 
-
-	// If an application uses the CreateWindowEx function to create the 
-	// toolbar, the application must send this message to the toolbar before 
-	// sending the TB_ADDBITMAP or TB_ADDBUTTONS message. The CreateToolbarEx 
-	// function automatically sends TB_BUTTONSTRUCTSIZE, and the size of the 
-	// TBBUTTON structure is a parameter of the function.
-	SendMessage(hToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
-
-	// Add images
-
-	TBADDBITMAP tbAddBmp = { 0 };
-	tbAddBmp.hInst = HINST_COMMCTRL;
-	tbAddBmp.nID = IDB_STD_SMALL_COLOR;
-
-	SendMessage(hToolbar, TB_ADDBITMAP, 0, (WPARAM)&tbAddBmp);
-
-	// Add buttons
-
-	const int numButtons = 7;
 	TBBUTTON tbButtons[numButtons] =
 	{
-		{ MAKELONG(STD_FILENEW, 0), NULL, TBSTATE_ENABLED,
-		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"New" },
-		{ MAKELONG(STD_FILEOPEN, 0), NULL, TBSTATE_ENABLED,
-		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"Open" },
-		{ MAKELONG(STD_FILESAVE, 0), NULL, 0,
-		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"Save" },
-		{ MAKELONG(0, 0), NULL, 0,
-		TBSTYLE_SEP, { 0 }, 0, (INT_PTR)L"" }, // Separator
-		{ MAKELONG(STD_COPY, 0), NULL, TBSTATE_ENABLED,
-		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"Copy" },
-		{ MAKELONG(STD_CUT, 0), NULL, TBSTATE_ENABLED,
-		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"Cut" },
-		{ MAKELONG(STD_PASTE, 0), NULL, TBSTATE_ENABLED,
-		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"Paste" }
+		{ 0, ID_RECTANGLE_BUTTON, TBSTATE_ENABLED,
+		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"Rectangle" },
+		{ 1, ID_TRIANGLE_BUTTON, TBSTATE_ENABLED,
+		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"Triangle" },
+		{ 2, ID_CIRCLE_BUTTON, TBSTATE_ENABLED,
+		BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)L"Circle" },
 	};
 
-	SendMessage(hToolbar, TB_ADDBUTTONS, numButtons, (LPARAM)tbButtons);
-
-	// Tell the toolbar to resize itself, and show it.
+	HWND hToolbar = CreateToolbarEx(hWnd, WS_VISIBLE | WS_CHILD | WS_BORDER | CCS_TOP | TBSTYLE_TOOLTIPS, IDC_TOOLBAR, 3, hInst, IDB_BITMAP4, tbButtons, 3, 40, 40, 40, 40, sizeof(TBBUTTON));
+	
 	SendMessage(hToolbar, TB_AUTOSIZE, 0, 0);
 
 	return hToolbar;
+}
+
+#define IDC_STATUSBAR		11990
+
+void OnStatusbarSize(HWND hWnd, UINT state, int cx, int cy)
+{
+	// Get the Statusbar control handle which was previously stored in the 
+	// user data associated with the parent window.
+	HWND hStatusbar = (HWND)GetWindowLongPtr(hWnd, GWLP_USERDATA);
+
+	// Partition the statusbar here to keep the ratio of the sizes of its 
+	// parts constant. Each part is set by specifing the coordinates of the 
+	// right edge of each part. -1 signifies the rightmost part of the parent.
+	int nHalf = cx / 2;
+	int nParts[] = { nHalf, nHalf + nHalf / 3, nHalf + nHalf * 2 / 3, -1 };
+	SendMessage(hStatusbar, SB_SETPARTS, 4, (LPARAM)&nParts);
+
+	// Resize statusbar so it's always same width as parent's client area
+	SendMessage(hStatusbar, WM_SIZE, 0, 0);
+}
+
+HWND OnInitStatusbarDialog(HWND hWnd)
+{
+	// Load and register IPAddress control class
+	INITCOMMONCONTROLSEX iccx;
+	iccx.dwSize = sizeof(INITCOMMONCONTROLSEX);
+	iccx.dwICC = ICC_BAR_CLASSES;
+	if (!InitCommonControlsEx(&iccx))
+		return FALSE;
+
+	// Create the status bar control
+	RECT rc = { 0, 0, 0, 0 };
+	HWND hStatusbar = CreateWindowEx(0, STATUSCLASSNAME, 0,
+		SBARS_SIZEGRIP | WS_CHILD | WS_VISIBLE,
+		rc.left, rc.top, rc.right, rc.bottom,
+		hWnd, (HMENU)IDC_STATUSBAR, g_hInst, 0);
+
+	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)hStatusbar);
+	int nParts[1] = { 256 * 5 };
+	SendMessage(hStatusbar, SB_SETPARTS, 1, (LPARAM)&nParts);
+
+	SendMessage(hStatusbar, SB_SETTEXT, 0, (LPARAM)L"Status Bar: Part 1");
+
+	return hStatusbar;
 }
 
 ATOM MyRegisterClass(HINSTANCE hInstance)
@@ -131,7 +141,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
 	wcex.cbSize = sizeof(WNDCLASSEX);
 
-	wcex.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS | !SBS_VERT |! SBS_HORZ;
+	wcex.style = 0;
 	wcex.lpfnWndProc = WndProc;
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
@@ -153,7 +163,7 @@ ATOM RegisterClassChild(HINSTANCE hInstance)
 
 	wcex.cbSize = sizeof(WNDCLASSEX);
 
-	wcex.style = CS_DBLCLKS;
+	wcex.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
 	wcex.lpfnWndProc = WndProcChild;
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
@@ -267,18 +277,25 @@ BOOL MouseInDocument(const POINT pMouse){
 	return (pMouse.y>0 && pMouse.x >0 && pMouse.x < DOC_SIZE_X && pMouse.y < DOC_SIZE_Y);
 }
 
-void DrawBoxOutline(HDC hdc, POINT ptBeg, POINT ptEnd)
+void DrawBoxOutline(HDC hdc, POINT ptBeg, POINT ptEnd, INT iLeft_Click_Mode)
 {
 	SetROP2(hdc, R2_NOT);
 	SelectObject(hdc, GetStockObject(NULL_BRUSH));
-	Rectangle(hdc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
+	switch (iLeft_Click_Mode){
+	case LCM_REGULAR: Rectangle(hdc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
+		break;
+	case LCM_CIRCLE: Ellipse(hdc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
+	}
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	static HWND hToolbar;
+	static HDC          hdcMemDoc, hdcMemBuf;
+	static HBITMAP      hbmMemBuf, hbmMemDoc, hOld;
+	static HWND hToolbar, hStatusbar;
 	HDC hdc;
 	PAINTSTRUCT ps;
+	static SIZE sClient;
 	int wmId, wmEvent, cxClient, cyClient;
 	static HWND hwndStatusBar, hWndChild;
 	static HMENU hMenu;
@@ -288,8 +305,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_CREATE:
 	{
 					  hWndChild = CreateWindow(L"Child", szTitle, WS_CHILD | WS_VISIBLE | WS_VSCROLL, CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, hWnd, (HMENU)HWNDCHILD, hInst, NULL);
-					  hToolbar = OnInitToolbarDialog(hWnd, hWnd, 0);
-					  
+					  hToolbar = OnInitToolbarDialog(hWnd);
+					  hStatusbar = OnInitStatusbarDialog(hWnd);
 					  break;
 	}
 	case WM_SETFOCUS:
@@ -301,15 +318,54 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 					   wmId = LOWORD(wParam);
 					   wmEvent = HIWORD(wParam);
+					   switch (wmId)
+					   {
+					   case ID_TRIANGLE_BUTTON:
+					   {
+												  if (wmId == ID_TRIANGLE_BUTTON){
+													  SendMessage(hStatusbar, SB_SETTEXT, 0, (LPARAM)_T("Triangle was choosen one!"));
+												  }
+					   }
+					   case ID_RECTANGLE_BUTTON:
+					   {
+												   if (wmId == ID_RECTANGLE_BUTTON){
+													   SendMessage(hStatusbar, SB_SETTEXT, 0, (LPARAM)_T("Rectangle was choosen one!"));
+												   }
+					   }
+					   case ID_CIRCLE_BUTTON:
+					   {
+												if (wmId == ID_CIRCLE_BUTTON){
+													SendMessage(hStatusbar, SB_SETTEXT, 0, (LPARAM)_T("Circle was choosen one!"));
+												}
+							SendMessage(hWndChild, WM_COMMAND, wParam, wmId);
+							break;
+					   }
+						   break;
+						   
+					   }
 					   break;
 	}
 	case WM_SIZE:
 	{
 					cxClient = LOWORD(lParam);
 					cyClient = HIWORD(lParam);
-					RECT toolbarSize;
-					GetWindowRect(hToolbar, &toolbarSize);
-					MoveWindow(hWndChild, 0, toolbarSize.bottom - toolbarSize.top, cxClient, cyClient - (toolbarSize.bottom - toolbarSize.top), TRUE);
+					RECT rToolbarSize, StatusbarSize;
+					GetWindowRect(hToolbar, &rToolbarSize);
+					GetWindowRect(hStatusbar, &StatusbarSize);
+					MoveWindow(hWndChild, 0, rToolbarSize.bottom - rToolbarSize.top, cxClient, cyClient - ((rToolbarSize.bottom - rToolbarSize.top) + (StatusbarSize.bottom - StatusbarSize.top)), TRUE);
+					hdc = GetDC(hWnd);
+
+					SelectObject(hdcMemBuf, hOld);
+					DeleteObject(hdcMemBuf);
+					DeleteDC(hdcMemBuf);
+
+					hdcMemBuf = CreateCompatibleDC(hdc);
+					hbmMemBuf = CreateCompatibleBitmap(hdc, sClient.cx, sClient.cy);
+
+					hOld = (HBITMAP)SelectObject(hdcMemBuf, hbmMemBuf);
+					ReleaseDC(hWnd, hdc);
+					SendMessage(hToolbar, TB_AUTOSIZE, sizeof(TBBUTTON), 0);
+					MoveWindow(hStatusbar, 0, cyClient - (StatusbarSize.bottom - StatusbarSize.top), cxClient, (StatusbarSize.bottom - StatusbarSize.top), TRUE);
 					break;
 	}
 	case WM_PAINT:
@@ -317,6 +373,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					 hdc = BeginPaint(hWnd, &ps);
 					 EndPaint(hWnd, &ps);
 					 break;
+	}
+	case WM_ERASEBKGND:{
+					break;
 	}
 	case WM_DESTROY:
 	{
@@ -344,27 +403,43 @@ LRESULT CALLBACK WndProcChild(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 	static SIZE sClient;
 	static INT iVscrollPos, iHscrollPos, cHorScrollMax, cVerScrollMax, iVPos, iHPos = 0;
 	static POINT pBeginPoint, pEndPoint;
+	static INT iLeft_Click_Mode;
 	switch (message)
 	{
 	case WM_CREATE:{
-		hdc = GetDC(hWnd);
-		hdcMemDoc = CreateCompatibleDC(hdc);
-		hbmMemDoc = CreateCompatibleBitmap(hdc, DOC_SIZE_X, DOC_SIZE_Y);
-		hOld = (HBITMAP)SelectObject(hdcMemDoc, hbmMemDoc);
+					   hdc = GetDC(hWnd);
+					   hdcMemDoc = CreateCompatibleDC(hdc);
+					   hbmMemDoc = CreateCompatibleBitmap(hdc, DOC_SIZE_X, DOC_SIZE_Y);
+					   hOld = (HBITMAP)SelectObject(hdcMemDoc, hbmMemDoc);
+					   iLeft_Click_Mode = LCM_REGULAR;
+					   SelectObject(hdc, GetStockObject(DC_BRUSH));
+					   SelectObject(hdc, GetStockObject(DC_PEN));
+					   SetDCBrushColor(hdc, RGB(255, 255, 255));
+					   SetDCPenColor(hdc, RGB(255, 255, 255));
+					   Rectangle(hdcMemDoc, 0, 0, DOC_SIZE_X, DOC_SIZE_Y);
 
-		SelectObject(hdc, GetStockObject(DC_BRUSH));
-		SelectObject(hdc, GetStockObject(DC_PEN));
-		SetDCBrushColor(hdc, RGB(255, 255, 255));
-		SetDCPenColor(hdc, RGB(255, 255, 255));
-		Rectangle(hdcMemDoc, 0, 0, DOC_SIZE_X, DOC_SIZE_Y);
-
-		ReleaseDC(hWnd, hdc);
-		break;
+					   ReleaseDC(hWnd, hdc);
+					   break;
 	}
 	case WM_COMMAND:
 		wmId = LOWORD(wParam);
 		wmEvent = HIWORD(wParam);
 		switch (wmId){
+		case ID_CIRCLE_BUTTON:
+		{
+								 iLeft_Click_Mode = LCM_CIRCLE;
+								 break;
+		}
+		case ID_RECTANGLE_BUTTON:
+		{
+									iLeft_Click_Mode = LCM_REGULAR;
+									break;
+		}
+		case ID_TRIANGLE_BUTTON:
+		{
+								   iLeft_Click_Mode = LCM_TRIANGLE;
+								   break;
+		}
 		case IDM_ABOUT:
 			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
 			break;
@@ -395,105 +470,126 @@ LRESULT CALLBACK WndProcChild(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		ReleaseDC(hWnd, hdc);
 		return 0;
 	case WM_PAINT:{
-		hdc = BeginPaint(hWnd, &ps);
-		
-		pBeginPoint.x = (sClient.cx - DOC_SIZE_X) / 2;
-		pBeginPoint.y = (sClient.cy - DOC_SIZE_Y) / 2;
+					  hdc = BeginPaint(hWnd, &ps);
 
-		SelectObject(hdcMemBuf, GetStockObject(DC_BRUSH));
-		SelectObject(hdcMemBuf, GetStockObject(DC_PEN));
-		SetDCBrushColor(hdcMemBuf, RGB(100, 100, 100));
-		SetDCPenColor(hdcMemBuf, RGB(100, 100, 100));
-		Rectangle(hdcMemBuf, 0, 0, sClient.cx, sClient.cy);
+					  pBeginPoint.x = (sClient.cx - DOC_SIZE_X) / 2;
+					  pBeginPoint.y = (sClient.cy - DOC_SIZE_Y) / 2;
 
-		BitBlt(hdcMemBuf, pBeginPoint.x - iHscrollPos, pBeginPoint.y - iVscrollPos, DOC_SIZE_X, DOC_SIZE_Y, hdcMemDoc, 0, 0, SRCCOPY);
+					  SelectObject(hdcMemBuf, GetStockObject(DC_BRUSH));
+					  SelectObject(hdcMemBuf, GetStockObject(DC_PEN));
+					  SetDCBrushColor(hdcMemBuf, RGB(100, 100, 100));
+					  SetDCPenColor(hdcMemBuf, RGB(100, 100, 100));
+					  Rectangle(hdcMemBuf, 0, 0, sClient.cx, sClient.cy);
 
-		BitBlt(hdc, 0,0 , sClient.cx, sClient.cy, hdcMemBuf, 0, 0, SRCCOPY);
-		EndPaint(hWnd, &ps);
-		break;
+					  BitBlt(hdcMemBuf, pBeginPoint.x - iHscrollPos, pBeginPoint.y - iVscrollPos, DOC_SIZE_X, DOC_SIZE_Y, hdcMemDoc, 0, 0, SRCCOPY);
+
+					  BitBlt(hdc, 0, 0, sClient.cx, sClient.cy, hdcMemBuf, 0, 0, SRCCOPY);
+					  EndPaint(hWnd, &ps);
+					  break;
 	}
 	case WM_LBUTTONDBLCLK:{
-		if (MouseInDocument(pMouse)){
-			Triangle tTriangle = CreateTriangle(pMouse);
-
-			tTriangle.draw(hdcMemDoc);
-			KillTimer(hWnd, ID_TIMER);
-			InvalidateRect(hWnd, NULL, TRUE);
-		}
-		break;
+							  hdc = GetDC(hWnd);
+							  SetViewportOrgEx(hdc, pBeginPoint.x - iHscrollPos, pBeginPoint.y - iVscrollPos, NULL);
+							  DPtoLP(hdc, &pMouse, 1);
+							  ReleaseDC(hWnd, hdc);
+							  if (MouseInDocument(pMouse)){
+								  Triangle tTriangle = CreateTriangle(pMouse);
+								  tTriangle.draw(hdcMemDoc);
+								  InvalidateRect(hWnd, NULL, FALSE);
+							  }
+							  break;
 	}
 	case WM_KEYDOWN:{
-		if ((wParam == 'O' || wParam == 'T' || wParam == 'R') && MouseInDocument(pMouse)){
-			GObject* object = 0;
-				switch (wParam){
-					case 'O':{
-						object = new Ellipsis(CreateCircle(pMouse));
+						hdc = GetDC(hWnd);
+						SetViewportOrgEx(hdc, pBeginPoint.x - iHscrollPos, pBeginPoint.y - iVscrollPos, NULL);
+						DPtoLP(hdc, &pMouse, 1);
+						ReleaseDC(hWnd, hdc);
+						if ((wParam == 'O' || wParam == 'T' || wParam == 'R') && MouseInDocument(pMouse)){
+							GObject* object = 0;
+							switch (wParam){
+							case 'O':{
+										 object = new Ellipsis(CreateCircle(pMouse));
+										 break;
+							}
+							case 'T':{
+										 object = new Triangle(CreateTriangle(pMouse));
+										 break;
+							}
+							case 'R':{
+										 int iRandomH = rand() % MAX_HOROFFSET;
+										 int iRandomV = rand() % MAX_HOROFFSET;
+										 RECT rCurrentRect;
+										 rCurrentRect.left = pMouse.x;
+										 rCurrentRect.top = pMouse.y;
+										 rCurrentRect.right = pMouse.x + iRandomH;
+										 rCurrentRect.bottom = pMouse.y + iRandomV;
+										 _Rectangle rRectangle(rCurrentRect, RGB(rand() % 255, rand() % 255, rand() % 255), RGB(rand() % 255, rand() % 255, rand() % 255));
+										 object = new _Rectangle(rRectangle);
+										 break;
+							}
+							}
+							object->draw(hdcMemDoc);
+							InvalidateRect(hWnd, NULL, FALSE);
+						}
 						break;
-					}
-					case 'T':{
-						object = new Triangle(CreateTriangle(pMouse));
-						break;
-					}
-					case 'R':{
-						int iRandomH = rand() % MAX_HOROFFSET;
-						int iRandomV = rand() % MAX_HOROFFSET;
-						RECT rCurrentRect;
-						rCurrentRect.left = pMouse.x;
-						rCurrentRect.top = pMouse.y;
-						rCurrentRect.right = pMouse.x + iRandomH;
-						rCurrentRect.bottom = pMouse.y + iRandomV;
-						_Rectangle rRectangle(rCurrentRect, RGB(rand() % 255, rand() % 255, rand() % 255), RGB(rand() % 255, rand() % 255, rand() % 255));
-						object = new _Rectangle(rRectangle);
-						break;
-					}
-			}
-			object->draw(hdcMemDoc);
-			InvalidateRect(hWnd, NULL, TRUE);
-		}
-		break;
 	}
 	case WM_LBUTTONDOWN:{
-		ptBeg = ptEnd = pMouse;
-		if (MouseInDocument(pMouse)){
-			SetCursor(LoadCursor(NULL, IDC_CROSS));
-			fBlocking = TRUE;
-		}
-		break;
+							hdc = GetDC(hWnd);
+							SetViewportOrgEx(hdc, pBeginPoint.x - iHscrollPos, pBeginPoint.y - iVscrollPos, NULL);
+							DPtoLP(hdc, &pMouse, 1);
+							ReleaseDC(hWnd, hdc);
+							if (iLeft_Click_Mode == LCM_TRIANGLE){
+								Triangle tTriangle = CreateTriangle(pMouse);
+								tTriangle.draw(hdcMemDoc);
+								InvalidateRect(hWnd, NULL, FALSE);
+							}
+							else{
+								ptBeg = ptEnd = pMouse;
+								if (MouseInDocument(pMouse)){
+									SetCursor(LoadCursor(NULL, IDC_CROSS));
+									fBlocking = TRUE;
+								}
+							}
+							break;
 	}
 	case WM_RBUTTONDOWN:{
-		if (MouseInDocument(pMouse)){
-			hdc = GetDC(hWnd);
-			SetViewportOrgEx(hdc, pBeginPoint.x, pBeginPoint.y, NULL);
-			Ellipsis eEllipse = CreateCircle(pMouse);
-			eEllipse.draw(hdcMemDoc);
+							if (MouseInDocument(pMouse)){
+								hdc = GetDC(hWnd);
+								SetViewportOrgEx(hdc, pBeginPoint.x - iHscrollPos, pBeginPoint.y - iVscrollPos, NULL);
+								DPtoLP(hdc, &pMouse, 1);
+								Ellipsis eEllipse = CreateCircle(pMouse);
+								eEllipse.draw(hdcMemDoc);
 
-			InvalidateRect(hWnd, NULL, TRUE);
-			ReleaseDC(hWnd, hdc);
-		}
-		break;
+								InvalidateRect(hWnd, NULL, FALSE);
+								ReleaseDC(hWnd, hdc);
+							}
+							break;
 	}
 	case WM_MOUSEMOVE:{
-		pMouse.x = LOWORD(lParam);
-		pMouse.y = HIWORD(lParam);
-		SetCursor(LoadCursor(NULL, IDC_ARROW));
-		hdc = GetDC(hWnd);
-		SetViewportOrgEx(hdc, pBeginPoint.x - iHscrollPos, pBeginPoint.y - iVscrollPos, NULL);
-		DPtoLP(hdc, &pMouse, 1);
-		if (fBlocking && MouseInDocument(pMouse))
-		{
-			SetCursor(LoadCursor(NULL, IDC_CROSS));
-			DrawBoxOutline(hdc, ptBeg, ptEnd);
+						  pMouse.x = LOWORD(lParam);
+						  pMouse.y = HIWORD(lParam);
+						  SetCursor(LoadCursor(NULL, IDC_ARROW));
 
-			ptEnd = pMouse;
+						  if (fBlocking && MouseInDocument(pMouse))
+						  {
+							  hdc = GetDC(hWnd);
+							  SetViewportOrgEx(hdc, pBeginPoint.x - iHscrollPos, pBeginPoint.y - iVscrollPos, NULL);
+							  DPtoLP(hdc, &pMouse, 1);
+							  SetCursor(LoadCursor(NULL, IDC_CROSS));
+							  DrawBoxOutline(hdc, ptBeg, ptEnd, iLeft_Click_Mode);
 
-			DrawBoxOutline(hdc, ptBeg, ptEnd);
+							  ptEnd = pMouse;
 
-		}
-		ReleaseDC(hWnd, hdc);
-		break;
+							  DrawBoxOutline(hdc, ptBeg, ptEnd, iLeft_Click_Mode);
+							  ReleaseDC(hWnd, hdc);
+						  }
+						  break;
 	}
 	case WM_LBUTTONUP:
 		if (fBlocking){
+			hdc = GetDC(hWnd);
+			SetViewportOrgEx(hdc, pBeginPoint.x - iHscrollPos, pBeginPoint.y - iVscrollPos, NULL);
+			DPtoLP(hdc, &pMouse, 1);
 			SetCursor(LoadCursor(NULL, IDC_ARROW));
 
 			fBlocking = FALSE;
@@ -503,9 +599,15 @@ LRESULT CALLBACK WndProcChild(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			SetDCPenColor(hdcMemDoc, RGB(rand() % 255, rand() % 255, rand() % 255));
 			SetDCBrushColor(hdcMemDoc, RGB(rand() % 255, rand() % 255, rand() % 255));
 
-			Rectangle(hdcMemDoc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
-
-			InvalidateRect(hWnd, NULL, TRUE);
+			switch (iLeft_Click_Mode){
+			case LCM_REGULAR:
+				Rectangle(hdcMemDoc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
+				break;
+			case LCM_CIRCLE:
+				Ellipse(hdcMemDoc, ptBeg.x, ptBeg.y, ptEnd.x, ptEnd.y);
+			}
+			InvalidateRect(hWnd, NULL, FALSE);
+			ReleaseDC(hWnd, hdc);
 		}
 		return 0;
 		break;
@@ -563,7 +665,6 @@ LRESULT CALLBACK WndProcChild(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 				iHscrollPos -= sClient.cx / 4;
 			}
 				break;
-
 		case SB_PAGEDOWN:
 			if (iHscrollPos + sClient.cx / DOC_SIZE_X < +cHorScrollMax){
 				iHscrollPos += sClient.cx / 4;

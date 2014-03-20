@@ -109,6 +109,10 @@
     <ResourceCompile Include="Win32Project2.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="bitmap1.bmp" />
+    <Image Include="bitmap2.bmp" />
+    <Image Include="bitmap3.bmp" />
+    <Image Include="bitmap4.bmp" />
     <Image Include="small.ico" />
     <Image Include="Win32Project2.ico" />
   </ItemGroup>
